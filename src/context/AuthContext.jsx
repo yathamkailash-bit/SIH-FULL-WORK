@@ -36,17 +36,69 @@ export const AuthProvider = ({ children }) => {
     setRole(selectedRole);
   };
 
-  const loginWithPin = (phoneOrEmail, pin) => {
+  // NOTE: Mocked auth for hackathon demo — replace with real backend auth before production.
+  const loginWithPin = (phoneOrEmail, pin, mode = 'login') => {
+    const cleanIdentifier = String(phoneOrEmail).trim();
+    const cleanPin = String(pin).trim();
+
+    if (!cleanIdentifier) {
+      return { success: false, error: 'Please enter a mobile number or email' };
+    }
+
+    if (!cleanPin || cleanPin.length !== 4 || !/^\d{4}$/.test(cleanPin)) {
+      return { success: false, error: 'Please enter a valid 4-digit numeric PIN' };
+    }
+
+    // Load registered users DB from localStorage
+    const savedUsersStr = localStorage.getItem('kalakriti_users_db');
+    let usersDb = {};
+    try {
+      usersDb = savedUsersStr ? JSON.parse(savedUsersStr) : {};
+    } catch {
+      usersDb = {};
+    }
+
+    const defaultName = role === 'artisan' ? 'Govindappa V.' : (role === 'admin' ? 'Admin Coordinator' : 'Samyuktha R.');
+
+    if (mode === 'register') {
+      // Register new user or update PIN
+      usersDb[cleanIdentifier] = {
+        pin: cleanPin,
+        role: role,
+        name: defaultName,
+        state: 'Andhra Pradesh'
+      };
+      localStorage.setItem('kalakriti_users_db', JSON.stringify(usersDb));
+    } else {
+      // Login mode - if user exists, verify PIN
+      if (usersDb[cleanIdentifier]) {
+        if (usersDb[cleanIdentifier].pin !== cleanPin) {
+          return { success: false, error: 'Incorrect PIN for this account. Please try again.' };
+        }
+      } else {
+        // Auto-save initial record for smooth onboarding if not yet in DB
+        usersDb[cleanIdentifier] = {
+          pin: cleanPin,
+          role: role,
+          name: defaultName,
+          state: 'Andhra Pradesh'
+        };
+        localStorage.setItem('kalakriti_users_db', JSON.stringify(usersDb));
+      }
+    }
+
+    const matchedUser = usersDb[cleanIdentifier];
     const newUser = {
       id: 'user-' + Date.now(),
-      identifier: phoneOrEmail,
+      identifier: cleanIdentifier,
       role: role,
-      name: role === 'artisan' ? 'Govindappa V.' : (role === 'admin' ? 'Admin Coordinator' : 'Samyuktha R.'),
-      state: 'Andhra Pradesh'
+      name: matchedUser?.name || defaultName,
+      state: matchedUser?.state || 'Andhra Pradesh'
     };
+
     setUser(newUser);
     setCurrentStep('home');
-    return true;
+    return { success: true };
   };
 
   const logout = () => {

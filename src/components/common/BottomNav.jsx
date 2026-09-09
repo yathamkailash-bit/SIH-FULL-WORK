@@ -43,13 +43,14 @@ export const BottomNav = ({ activeTab, setActiveTab }) => {
     );
   }
 
-  // Customer Navigation (5 tabs: Home, Explore, Artisans, Favorites, Cart)
+  // Customer Navigation (6 tabs: Home, Explore, Artisans, Favorites, Cart, Profile)
   const customerTabs = [
     { id: 'home', label: t('nav_home'), icon: Home },
     { id: 'explore', label: t('nav_explore'), icon: Compass },
     { id: 'artisans', label: t('nav_artisans'), icon: Users },
     { id: 'favorites', label: t('nav_favorites'), icon: Heart },
-    { id: 'cart', label: t('nav_cart'), icon: ShoppingCart, badge: cartItemsCount }
+    { id: 'cart', label: t('nav_cart'), icon: ShoppingCart, badge: cartItemsCount },
+    { id: 'profile', label: t('nav_profile'), icon: User }
   ];
 
   return (

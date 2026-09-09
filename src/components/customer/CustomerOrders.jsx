@@ -49,36 +49,48 @@ export const CustomerOrders = () => {
                 Live Delivery Tracker
               </span>
 
-              <div className="flex items-center justify-between relative px-2">
-                <div className="absolute top-3 left-4 right-4 h-1 bg-stone-200 -z-0"></div>
-                <div className="absolute top-3 left-4 w-2/3 h-1 bg-emerald-600 -z-0"></div>
+              {(() => {
+                const steps = ord.trackingSteps || [];
+                const doneCount = steps.filter(s => s.done || s.active).length;
+                const totalSteps = steps.length;
+                const progressPct = totalSteps > 1 ? Math.max(0, Math.min(100, ((doneCount - 1) / (totalSteps - 1)) * 100)) : 0;
 
-                {ord.trackingSteps.map((step, sIdx) => {
-                  const isDone = step.done || step.active;
-                  const isActive = step.active;
+                return (
+                  <div className="flex items-center justify-between relative px-2">
+                    <div className="absolute top-3 left-4 right-4 h-1 bg-stone-200 -z-0"></div>
+                    <div
+                      className="absolute top-3 left-4 h-1 bg-emerald-600 -z-0 transition-all duration-500"
+                      style={{ width: `calc((100% - 32px) * ${progressPct / 100})` }}
+                    ></div>
 
-                  return (
-                    <div key={sIdx} className="flex flex-col items-center z-10">
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition ${
-                          isActive
-                            ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-110'
-                            : isDone
-                            ? 'bg-emerald-700 text-white'
-                            : 'bg-stone-200 text-stone-500'
-                        }`}
-                      >
-                        {isDone ? '✓' : sIdx + 1}
-                      </div>
-                      <span className={`text-[9px] font-bold mt-1 max-w-[50px] text-center ${
-                        isActive ? 'text-emerald-800' : 'text-stone-500'
-                      }`}>
-                        {step.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    {steps.map((step, sIdx) => {
+                      const isDone = step.done || step.active;
+                      const isActive = step.active;
+
+                      return (
+                        <div key={sIdx} className="flex flex-col items-center z-10">
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition ${
+                              isActive
+                                ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-110'
+                                : isDone
+                                ? 'bg-emerald-700 text-white'
+                                : 'bg-stone-200 text-stone-500'
+                            }`}
+                          >
+                            {isDone ? '✓' : sIdx + 1}
+                          </div>
+                          <span className={`text-[9px] font-bold mt-1 max-w-[50px] text-center ${
+                            isActive ? 'text-emerald-800' : 'text-stone-500'
+                          }`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ))}

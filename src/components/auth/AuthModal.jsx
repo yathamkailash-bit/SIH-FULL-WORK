@@ -10,14 +10,19 @@ export const AuthModal = () => {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [identifier, setIdentifier] = useState('9876543210');
   const [pin, setPin] = useState('');
+  const [authError, setAuthError] = useState(null);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (pin.length < 4) {
-      alert("Please enter a 4-digit PIN");
+    if (e) e.preventDefault();
+    setAuthError(null);
+    if (pin.length !== 4) {
+      setAuthError("Please enter a 4-digit numeric PIN");
       return;
     }
-    loginWithPin(identifier, pin);
+    const result = loginWithPin(identifier, pin, mode);
+    if (result && !result.success) {
+      setAuthError(result.error || "Authentication failed. Please check your PIN.");
+    }
   };
 
   const handlePinClick = (num) => {
@@ -55,7 +60,7 @@ export const AuthModal = () => {
         {/* Auth Mode Switcher Tabs */}
         <div className="flex bg-stone-200/70 p-1 rounded-xl mt-4">
           <button
-            onClick={() => setMode('login')}
+            onClick={() => { setMode('login'); setAuthError(null); }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
               mode === 'login' ? 'bg-white text-emerald-800 shadow-xs' : 'text-stone-600'
             }`}
@@ -63,7 +68,7 @@ export const AuthModal = () => {
             Login
           </button>
           <button
-            onClick={() => setMode('register')}
+            onClick={() => { setMode('register'); setAuthError(null); }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
               mode === 'register' ? 'bg-white text-emerald-800 shadow-xs' : 'text-stone-600'
             }`}
@@ -71,6 +76,13 @@ export const AuthModal = () => {
             Register
           </button>
         </div>
+
+        {/* Error Alert */}
+        {authError && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 font-semibold text-center animate-in fade-in duration-200">
+            {authError}
+          </div>
+        )}
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">

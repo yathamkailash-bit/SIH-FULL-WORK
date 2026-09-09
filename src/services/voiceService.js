@@ -50,16 +50,19 @@ class VoiceService {
     }
   }
 
+  isSupported() {
+    return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
   listen(langCode = 'en', onResult, onError, onEnd) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = typeof window !== 'undefined' 
+      ? (window.SpeechRecognition || window.webkitSpeechRecognition) 
+      : null;
 
     if (!SpeechRecognition) {
-      console.warn("Speech Recognition API not supported in this browser. Using simulation fallback.");
-      // Simulation fallback for environments without SpeechRecognition
-      setTimeout(() => {
-        onResult("This is a wooden Kondapalli elephant toy made from softwood and natural dyes");
-        if (onEnd) onEnd();
-      }, 3500);
+      console.warn("Speech Recognition API not supported in this browser.");
+      if (onError) onError('not_supported');
+      if (onEnd) onEnd();
       return { stop: () => {} };
     }
 
@@ -71,14 +74,20 @@ class VoiceService {
 
       recognition.onresult = (event) => {
         let transcript = '';
+        let isFinal = false;
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           transcript += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            isFinal = true;
+          }
         }
-        if (onResult) onResult(transcript, event.results[0].isFinal);
+        if (onResult) onResult(transcript, isFinal);
       };
 
       recognition.onerror = (event) => {
-        if (onError) onError(event.error);
+        const errorType = event.error || event;
+        console.warn("Speech recognition error:", errorType);
+        if (onError) onError(errorType);
       };
 
       recognition.onend = () => {
@@ -88,7 +97,9 @@ class VoiceService {
       recognition.start();
       return recognition;
     } catch (err) {
+      console.warn("Speech recognition exception:", err);
       if (onError) onError(err);
+      if (onEnd) onEnd();
       return { stop: () => {} };
     }
   }

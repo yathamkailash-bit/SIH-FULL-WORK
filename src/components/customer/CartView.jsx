@@ -5,7 +5,7 @@ import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const CartView = ({ onOrderPlaced }) => {
-  const { cart, removeFromCart, placeCustomerOrder } = useAppData();
+  const { cart, removeFromCart, increaseQuantity, decreaseQuantity, placeCustomerOrder } = useAppData();
   const { speakPrompt } = useVoice();
   const { t } = useLanguage();
   const [isOrdered, setIsOrdered] = useState(false);
@@ -67,17 +67,46 @@ export const CartView = ({ onOrderPlaced }) => {
                   <h4 className="text-xs font-extrabold text-stone-900 truncate">
                     {item.product.name}
                   </h4>
-                  <div className="text-sm font-extrabold text-emerald-800 mt-0.5">
-                    ₹{item.product.price.toLocaleString()}
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-sm font-extrabold text-emerald-800">
+                      ₹{(item.product.price * item.quantity).toLocaleString()}
+                    </span>
+                    {item.quantity > 1 && (
+                      <span className="text-[10px] text-stone-400 font-semibold">
+                        (₹{item.product.price.toLocaleString()} each)
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Quantity Controls & Remove */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center bg-stone-100 rounded-xl p-0.5 border border-stone-200">
+                    <button
+                      onClick={() => decreaseQuantity(item.product.id)}
+                      className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-stone-700 hover:bg-stone-200 active:scale-95 shadow-2xs"
+                      title="Decrease quantity"
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span className="w-6 text-center text-xs font-bold text-stone-800">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => increaseQuantity(item.product.id)}
+                      className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-stone-700 hover:bg-stone-200 active:scale-95 shadow-2xs"
+                      title="Increase quantity"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => removeFromCart(item.product.id)}
-                    className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100"
+                    className="w-7 h-7 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 transition"
+                    title="Remove item"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

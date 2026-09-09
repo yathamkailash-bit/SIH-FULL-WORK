@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Mic, X, Volume2, ArrowRight } from 'lucide-react';
+import { Mic, X, Volume2, ArrowRight, AlertCircle } from 'lucide-react';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
-  const { isListening, speechText, startListening, speakPrompt, stopVoice } = useVoice();
+  const { isListening, speechText, startListening, speakPrompt, stopVoice, voiceError, isVoiceSupported } = useVoice();
   const { t, language } = useLanguage();
   const [statusMessage, setStatusMessage] = useState("Tap mic to speak");
 
   useEffect(() => {
     if (isOpen) {
+      if (!isVoiceSupported) {
+        setStatusMessage("Voice recognition not supported in this browser");
+        return;
+      }
       speakPrompt("I am listening. Speak your command.", () => {
         handleStartMic();
       });
@@ -19,6 +23,9 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
   }, [isOpen]);
 
   const handleStartMic = () => {
+    if (!isVoiceSupported) {
+      return;
+    }
     setStatusMessage("Listening...");
     startListening((finalTranscript) => {
       processCommand(finalTranscript);
@@ -29,7 +36,7 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
     const lower = text.toLowerCase();
     setStatusMessage(`Recognized: "${text}"`);
 
-    if (lower.includes('add') || lower.includes('product') || lower.includes('photo') || lower.includes('सामान')) {
+    if (lower.includes('add') || lower.includes('product') || lower.includes('photo') || lower.includes('सामान') || lower.includes('చేయి')) {
       speakPrompt("Opening Add Product");
       setTimeout(() => {
         onClose();
@@ -41,14 +48,14 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
         onClose();
         onActionTrigger('view_orders');
       }, 1200);
-    } else if (lower.includes('my product') || lower.includes('inventory')) {
+    } else if (lower.includes('my product') || lower.includes('inventory') || lower.includes('सामग्री')) {
       speakPrompt("Showing your products");
       setTimeout(() => {
         onClose();
         onActionTrigger('view_products');
       }, 1200);
     } else {
-      speakPrompt("Understood. Processing your request.");
+      speakPrompt("Command received. Opening Add Product.");
       setTimeout(() => {
         onClose();
         onActionTrigger('add_product');
@@ -75,16 +82,37 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
         <h3 className="text-xl font-extrabold text-stone-900">
           {t('speak_app')}
         </h3>
-        <p className="text-xs font-semibold text-emerald-700 mt-1">
-          {statusMessage}
+        
+        {/* Status or Error Message */}
+        <p className={`text-xs font-semibold mt-1 ${voiceError || !isVoiceSupported ? 'text-amber-700' : 'text-emerald-700'}`}>
+          {voiceError || statusMessage}
         </p>
 
+        {/* Browser compatibility warning */}
+        {!isVoiceSupported && (
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 font-medium flex items-center gap-2 text-left">
+            <AlertCircle size={18} className="shrink-0 text-amber-600" />
+            <span>Voice commands aren't supported in this browser — try Chrome or Edge.</span>
+          </div>
+        )}
+
+        {/* Error notification banner */}
+        {voiceError && isVoiceSupported && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-800 font-medium flex items-center gap-2 text-left">
+            <AlertCircle size={18} className="shrink-0 text-red-600" />
+            <span>{voiceError}</span>
+          </div>
+        )}
+
         {/* Animated Mic Target */}
-        <div className="my-8 relative flex items-center justify-center">
+        <div className="my-6 relative flex items-center justify-center">
           <button
             onClick={handleStartMic}
+            disabled={!isVoiceSupported}
             className={`w-24 h-24 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${
-              isListening
+              !isVoiceSupported
+                ? 'bg-stone-300 cursor-not-allowed'
+                : isListening
                 ? 'bg-emerald-600 mic-pulse scale-110'
                 : 'bg-emerald-700 hover:bg-emerald-800'
             }`}
@@ -100,7 +128,7 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
         )}
 
         <p className="text-[11px] text-stone-400 font-medium">
-          Say: "Add wooden toy", "Show my orders", or "Help me"
+          Say: "Add wooden toy", "Show my orders", or "View products"
         </p>
       </div>
     </div>

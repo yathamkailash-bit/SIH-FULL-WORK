@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Sparkles, Heart, Compass, Users, ShoppingCart, User, MapPin } from 'lucide-react';
+import { Search, Filter, Sparkles, Heart, Compass, Users, ShoppingCart, User, MapPin, ChevronRight, Package, HelpCircle, Settings, LogOut } from 'lucide-react';
 import { HeaderBar } from '../common/HeaderBar';
 import { BottomNav } from '../common/BottomNav';
 import { CustomerProductCard } from './CustomerProductCard';
@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const CustomerHome = () => {
-  const { products, artisans, favorites } = useAppData();
+  const { products, artisans, favorites, customerOrders, cart } = useAppData();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
 
@@ -178,6 +178,101 @@ export const CustomerHome = () => {
 
         {/* ORDERS TAB */}
         {activeTab === 'orders' && <CustomerOrders />}
+
+        {/* PROFILE TAB */}
+        {activeTab === 'profile' && (
+          <div className="p-4 space-y-4">
+            {/* Customer Profile Card */}
+            <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-md flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl font-extrabold shrink-0 border-2 border-emerald-300">
+                🛍️
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-extrabold text-stone-900 truncate">
+                  {user?.name || 'Samyuktha R.'}
+                </h3>
+                <p className="text-xs font-semibold text-stone-500">
+                  {user?.identifier || '+91 9876543210'} • Customer
+                </p>
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md mt-1">
+                  Artisan Heritage Patron
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <div 
+                onClick={() => setActiveTab('orders')}
+                className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs text-center cursor-pointer hover:bg-stone-50 transition"
+              >
+                <span className="text-stone-400 text-[11px] font-bold block">Orders</span>
+                <span className="text-lg font-extrabold text-emerald-800 mt-0.5 block">{customerOrders.length}</span>
+              </div>
+              <div 
+                onClick={() => setActiveTab('favorites')}
+                className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs text-center cursor-pointer hover:bg-stone-50 transition"
+              >
+                <span className="text-stone-400 text-[11px] font-bold block">Favorites</span>
+                <span className="text-lg font-extrabold text-red-600 mt-0.5 block">{favorites.length}</span>
+              </div>
+              <div 
+                onClick={() => setActiveTab('cart')}
+                className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs text-center cursor-pointer hover:bg-stone-50 transition"
+              >
+                <span className="text-stone-400 text-[11px] font-bold block">In Cart</span>
+                <span className="text-lg font-extrabold text-stone-900 mt-0.5 block">{cart.reduce((s, i) => s + i.quantity, 0)}</span>
+              </div>
+            </div>
+
+            {/* Customer Settings & Help Menu */}
+            <div className="bg-white rounded-3xl border border-stone-200 shadow-md divide-y divide-stone-100 text-xs font-bold text-stone-700">
+              <div 
+                onClick={() => setActiveTab('orders')}
+                className="p-4 flex items-center justify-between cursor-pointer hover:bg-stone-50"
+              >
+                <span className="flex items-center gap-3">
+                  <Package size={18} className="text-emerald-700" />
+                  <span>My Orders & Live Tracking</span>
+                </span>
+                <ChevronRight size={18} className="text-stone-400" />
+              </div>
+              <div 
+                onClick={() => setActiveTab('favorites')}
+                className="p-4 flex items-center justify-between cursor-pointer hover:bg-stone-50"
+              >
+                <span className="flex items-center gap-3">
+                  <Heart size={18} className="text-red-500" />
+                  <span>Saved Handicrafts</span>
+                </span>
+                <ChevronRight size={18} className="text-stone-400" />
+              </div>
+              <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-stone-50">
+                <span className="flex items-center gap-3">
+                  <HelpCircle size={18} className="text-emerald-700" />
+                  <span>Customer Support & Fair Trade Policy</span>
+                </span>
+                <ChevronRight size={18} className="text-stone-400" />
+              </div>
+              <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-stone-50">
+                <span className="flex items-center gap-3">
+                  <Settings size={18} className="text-stone-500" />
+                  <span>Preferences & Delivery Addresses</span>
+                </span>
+                <ChevronRight size={18} className="text-stone-400" />
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={logout}
+              className="w-full py-3.5 bg-red-50 text-red-700 hover:bg-red-100 active:scale-[0.99] rounded-2xl font-bold text-xs transition flex items-center justify-center gap-2"
+            >
+              <LogOut size={16} />
+              <span>Switch Role / Logout</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Product Detail Drawer */}

@@ -11,6 +11,8 @@ export const VoiceProvider = ({ children }) => {
   });
   const [isListening, setIsListening] = useState(false);
   const [speechText, setSpeechText] = useState('');
+  const [voiceError, setVoiceError] = useState(null);
+  const [isVoiceSupported] = useState(() => voiceService.isSupported());
 
   useEffect(() => {
     localStorage.setItem('kalakriti_muted', isMuted);
@@ -24,6 +26,9 @@ export const VoiceProvider = ({ children }) => {
   const speakPrompt = (text, onEnd) => {
     if (!isMuted) {
       voiceService.speak(text, language, onEnd);
+    } else if (onEnd) {
+      // still advance the flow even when muted
+      onEnd();
     }
   };
 
@@ -31,9 +36,19 @@ export const VoiceProvider = ({ children }) => {
     voiceService.stop();
   };
 
-  const startListening = (onFinalResult) => {
+  const startListening = (onFinalResult, onErrorCallback) => {
+    setVoiceError(null);
+
+    if (!isVoiceSupported) {
+      const unsupportedMsg = "Voice commands aren't supported in this browser — try Chrome or Edge.";
+      setVoiceError(unsupportedMsg);
+      if (onErrorCallback) onErrorCallback(unsupportedMsg);
+      return { stop: () => {} };
+    }
+
     setIsListening(true);
     setSpeechText('');
+
     return voiceService.listen(
       language,
       (text, isFinal) => {
@@ -45,6 +60,18 @@ export const VoiceProvider = ({ children }) => {
       (err) => {
         console.error("Speech recognition error:", err);
         setIsListening(false);
+        let readableError = "Couldn't hear you — check microphone permissions and try again.";
+        if (err === 'not-allowed' || err === 'permission-denied') {
+          readableError = "Microphone permission denied. Please allow microphone access in browser settings.";
+        } else if (err === 'no-speech') {
+          readableError = "No speech detected. Please tap mic and try again.";
+        } else if (err === 'not_supported') {
+          readableError = "Voice commands aren't supported in this browser — try Chrome or Edge.";
+        } else if (typeof err === 'string') {
+          readableError = `Speech error: ${err}`;
+        }
+        setVoiceError(readableError);
+        if (onErrorCallback) onErrorCallback(readableError);
       },
       () => {
         setIsListening(false);
@@ -62,7 +89,10 @@ export const VoiceProvider = ({ children }) => {
         isListening,
         setIsListening,
         speechText,
-        startListening
+        startListening,
+        isVoiceSupported,
+        voiceError,
+        setVoiceError
       }}
     >
       {children}

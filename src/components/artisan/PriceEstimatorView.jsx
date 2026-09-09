@@ -18,7 +18,8 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
     workersCount: formData.workersCount || 1,
     workingDays: formData.workingDays || 1,
     state: selectedState,
-    craftCategory: formData.craft || 'Wooden Toys / Kondapalli'
+    craftCategory: formData.craft || 'Wooden Toys / Kondapalli',
+    customLabourRate: formData.labourCost || null
   });
 
   const finalPrice = isEditing && customPrice ? Number(customPrice) : estimate.recommendedPrice;

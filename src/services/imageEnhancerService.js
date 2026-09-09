@@ -2,10 +2,14 @@
  * KALAKRITI AI Image Enhancement Service
  * 
  * Flow:
- *  1. checkAuthenticity()  - detect screen/print re-photograph BEFORE processing
+ *  1. checkAuthenticity()   - detect screen/print re-photograph BEFORE processing
  *  2. enhanceProductImage() - call Gemini to identify product, remove hands/bg, generate pro product shot
  *
- * If Gemini image generation fails → throw a clear error (no silent fallback to original).
+ * NOTE ON API KEY SECURITY:
+ * Reading VITE_GEMINI_API_KEY directly in client-side code is for hackathon/prototype demo purposes.
+ * For a production deployment, route these calls via a lightweight backend/serverless proxy endpoint
+ * (e.g. Vercel/Netlify Function, Cloudflare Worker, or Express route) that stores the key securely,
+ * and restrict API keys in Google Cloud Console to specific HTTP referrers as a stopgap.
  */
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,58 +58,77 @@ export const fileOrUrlToBase64 = (imageInput) => {
 // ─── Step 1 → Detect product category from image via Gemini text ──────────────
 
 const detectProductCategory = async (mimeType, base64Data, apiKey) => {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  let lastError = null;
 
-  const body = {
-    contents: [{
-      parts: [
-        {
-          text: `Look at this photo and identify the main handcrafted/artisan product visible.
+  for (const model of textModels) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const body = {
+      contents: [{
+        parts: [
+          {
+            text: `Look at this photo and identify the main handcrafted/artisan product visible.
 Return ONLY a JSON object in this exact format, no extra text:
 {
   "product": "<short product name, e.g. wooden elephant, blue pottery bowl, kalamkari stole>",
   "category": "<one of: wooden_craft | pottery | jewellery | textile | painting | metal_craft | leather | other>",
   "backgroundStyle": "<one short sentence describing the ideal professional e-commerce background for this product, e.g. 'warm artisan wooden workshop table with soft natural light'>"
 }`
-        },
-        { inlineData: { mimeType, data: base64Data } }
-      ]
-    }],
-    generationConfig: { responseModalities: ['TEXT'] }
-  };
-
-  console.log('[KalaKriti] 🔍 Calling Gemini to detect product & category...');
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error('[KalaKriti] ❌ Gemini product detection error:', res.status, errText);
-    throw new Error(`Gemini product detection failed: ${res.status}`);
-  }
-
-  const json = await res.json();
-  const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-  try {
-    const parsed = JSON.parse(cleaned);
-    console.log(`[KalaKriti] ✅ Detected product: "${parsed.product}"`);
-    console.log(`[KalaKriti] ✅ Detected category: "${parsed.category}"`);
-    console.log(`[KalaKriti] ✅ Background style: "${parsed.backgroundStyle}"`);
-    return parsed;
-  } catch {
-    // If parsing fails use sensible defaults
-    console.warn('[KalaKriti] ⚠️ Could not parse category JSON, using defaults. Raw:', raw);
-    return {
-      product: 'handcrafted artisan product',
-      category: 'other',
-      backgroundStyle: 'clean neutral studio with soft professional lighting'
+          },
+          { inlineData: { mimeType, data: base64Data } }
+        ]
+      }],
+      generationConfig: { responseModalities: ['TEXT'] }
     };
+
+    console.log(`[KalaKriti] 🔍 Calling Gemini (${model}) to detect product & category...`);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`[KalaKriti] ⚠️ Gemini product detection error on ${model} (${res.status}):`, errText);
+        lastError = `Model ${model} returned ${res.status}: ${errText.slice(0, 150)}`;
+        continue;
+      }
+
+      const json = await res.json();
+      const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(cleaned);
+        console.log(`[KalaKriti] ✅ Detected product: "${parsed.product}"`);
+        console.log(`[KalaKriti] ✅ Detected category: "${parsed.category}"`);
+        console.log(`[KalaKriti] ✅ Background style: "${parsed.backgroundStyle}"`);
+        return parsed;
+      } catch {
+        // If parsing fails use sensible defaults
+        console.warn('[KalaKriti] ⚠️ Could not parse category JSON, using defaults. Raw:', raw);
+        return {
+          product: 'handcrafted artisan product',
+          category: 'other',
+          backgroundStyle: 'clean neutral studio with soft professional lighting'
+        };
+      }
+    } catch (err) {
+      console.warn(`[KalaKriti] ⚠️ Fetch error calling ${model}:`, err.message);
+      lastError = err.message;
+    }
   }
+
+  // Fallback defaults if all text models fail
+  console.warn('[KalaKriti] ⚠️ Product detection fallback due to errors:', lastError);
+  return {
+    product: 'handcrafted artisan product',
+    category: 'other',
+    backgroundStyle: 'clean neutral studio with soft professional lighting'
+  };
 };
 
 // ─── Step 2 → Generate professional product image via Gemini imagen ───────────
@@ -126,11 +149,15 @@ Your task:
 
 CRITICAL: The output image must show ONLY the isolated product on the new background. Do NOT include hands, people, or the original background.`;
 
-  // Try gemini-2.0-flash-preview-image-generation first (supports image output)
+  // Try current image generation models in order
   const modelsToTry = [
-    'gemini-2.0-flash-preview-image-generation',
+    'gemini-3.1-flash-image',
+    'imagen-3.0-generate-002',
+    'gemini-2.5-flash-image',
     'gemini-2.0-flash-exp'
   ];
+
+  let detailedErrors = [];
 
   for (const model of modelsToTry) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -159,6 +186,7 @@ CRITICAL: The output image must show ONLY the isolated product on the new backgr
       if (!res.ok) {
         const errText = await res.text();
         console.warn(`[KalaKriti] ⚠️ Model ${model} returned ${res.status}: ${errText}`);
+        detailedErrors.push(`${model} (HTTP ${res.status}): ${errText.slice(0, 120)}`);
         continue; // try next model
       }
 
@@ -179,13 +207,19 @@ CRITICAL: The output image must show ONLY the isolated product on the new backgr
 
       // If response ok but no image part, log and try next
       console.warn(`[KalaKriti] ⚠️ ${model} responded but returned no image part. Parts:`, parts.map(p => Object.keys(p)));
+      detailedErrors.push(`${model}: No image part returned in candidate`);
     } catch (err) {
       console.warn(`[KalaKriti] ⚠️ Error calling ${model}:`, err.message);
+      detailedErrors.push(`${model}: ${err.message}`);
     }
   }
 
-  // All models exhausted without returning an image
-  throw new Error('AI product isolation failed. Please try another photo.');
+  // All models exhausted without returning an image - surface clear diagnostic info
+  const failureReason = detailedErrors.length > 0 
+    ? detailedErrors.join(' | ') 
+    : 'No compatible image generation model responded';
+  
+  throw new Error(`AI product isolation failed: ${failureReason}. Please check API key permissions or try another photo.`);
 };
 
 // ─── CAPABILITY 2 — Authenticity / Re-photograph Detection ───────────────────
@@ -206,46 +240,54 @@ export const checkAuthenticity = async (imageInput) => {
       return DEFAULT_AUTHENTIC;
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
 
-    const body = {
-      contents: [{
-        parts: [
-          {
-            text: `Analyze this product photo carefully and determine if it is a DIRECT photo of a real physical object, OR if it is a photo taken of a screen (monitor/phone/TV), a printed page, a book, a magazine, or another photo/image displayed on a surface. Look for moire patterns, screen glare, visible pixel grid, screen bezel edges, page curvature, print dot patterns.
+    for (const model of textModels) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const body = {
+        contents: [{
+          parts: [
+            {
+              text: `Analyze this product photo carefully and determine if it is a DIRECT photo of a real physical object, OR if it is a photo taken of a screen (monitor/phone/TV), a printed page, a book, a magazine, or another photo/image displayed on a surface. Look for moire patterns, screen glare, visible pixel grid, screen bezel edges, page curvature, print dot patterns.
 
 Respond ONLY in this exact JSON format, no other text:
 { "isAuthentic": true or false, "confidence": "high" or "medium" or "low", "reason": "one short sentence explaining what you observed" }`
-          },
-          { inlineData: { mimeType, data: base64Data } }
-        ]
-      }],
-      generationConfig: { responseModalities: ['TEXT'] }
-    };
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-      console.warn('[KalaKriti] ⚠️ Authenticity check API error, failing open:', res.status);
-      return DEFAULT_AUTHENTIC;
-    }
-
-    const json = await res.json();
-    const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-
-    if (typeof parsed.isAuthentic === 'boolean') {
-      console.log(`[KalaKriti] 🛡️ Authenticity result: isAuthentic=${parsed.isAuthentic}, confidence=${parsed.confidence}`);
-      return {
-        isAuthentic: parsed.isAuthentic,
-        confidence: parsed.confidence || 'medium',
-        reason: parsed.reason || ''
+            },
+            { inlineData: { mimeType, data: base64Data } }
+          ]
+        }],
+        generationConfig: { responseModalities: ['TEXT'] }
       };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          console.warn(`[KalaKriti] ⚠️ Authenticity check API error on ${model}:`, res.status);
+          continue;
+        }
+
+        const json = await res.json();
+        const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+
+        if (typeof parsed.isAuthentic === 'boolean') {
+          console.log(`[KalaKriti] 🛡️ Authenticity result: isAuthentic=${parsed.isAuthentic}, confidence=${parsed.confidence}`);
+          return {
+            isAuthentic: parsed.isAuthentic,
+            confidence: parsed.confidence || 'medium',
+            reason: parsed.reason || ''
+          };
+        }
+      } catch (err) {
+        console.warn(`[KalaKriti] ⚠️ Model ${model} authenticity error:`, err.message);
+      }
     }
 
     return DEFAULT_AUTHENTIC;
@@ -262,7 +304,7 @@ export const enhanceProductImage = async (imageInput) => {
 
   if (!apiKey || apiKey === 'MY_API_KEY') {
     console.error('[KalaKriti] ❌ No valid Gemini API key found in VITE_GEMINI_API_KEY.');
-    throw new Error('AI product isolation failed. Please try another photo.');
+    throw new Error('VITE_GEMINI_API_KEY is not configured. Please set your Gemini API key in the environment.');
   }
 
   console.log('[KalaKriti] 🚀 Starting AI product image enhancement pipeline...');
