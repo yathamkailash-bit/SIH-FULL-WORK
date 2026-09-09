@@ -69,7 +69,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
-      } catch (err) {
+      } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
       }
       streamRef.current = stream;
@@ -230,7 +230,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     }
   };
 
-  const handleConfirmPrice = async (finalPrice, estimateData) => {
+  const handleConfirmPrice = async (finalPrice, _estimateData) => {
     const finalProduct = {
       name: formData.name,
       artisanName: user?.name || 'Artisan',

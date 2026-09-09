@@ -4,11 +4,9 @@ import {
   collection, 
   onSnapshot, 
   doc, 
-  setDoc, 
-  getDoc,
-  getDocs
+  setDoc
 } from 'firebase/firestore';
-import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -34,24 +32,22 @@ try {
     app = getApp();
   }
 
-  // Only enable Firestore/Storage if real credentials exist or in supported env
+  // Only connect if real project ID provided or default placeholder
   if (import.meta.env?.VITE_FIREBASE_PROJECT_ID) {
     db = getFirestore(app);
     storage = getStorage(app);
     auth = getAuth(app);
     isFirebaseConnected = true;
-    console.log('[KalaKriti] 🔥 Firebase SDK initialized successfully.');
-  } else {
-    console.log('[KalaKriti] ℹ️ Firebase credentials missing; running in simulated real-time offline/cross-tab mode.');
   }
 } catch (err) {
-  console.warn('[KalaKriti] ⚠️ Firebase initialization notice:', err.message);
+  console.warn('[KalaKriti] Firebase initialized in local fallback mode:', err.message);
+  isFirebaseConnected = false;
 }
 
 export { db, storage, auth, isFirebaseConnected };
 
 // Real-time synchronization helper (cross-device/tab Firestore listener with fallback)
-export const subscribeToRealtimeCollection = (collectionName, onDataChange, initialFallbackData = []) => {
+export const subscribeToRealtimeCollection = (collectionName, onDataChange) => {
   if (isFirebaseConnected && db) {
     try {
       const colRef = collection(db, collectionName);
@@ -100,7 +96,7 @@ export const broadcastDataUpdate = (collectionName, docs) => {
     try {
       const channel = new BroadcastChannel(`kalakriti_${collectionName}_channel`);
       channel.postMessage({ docs });
-    } catch (e) {
+    } catch {
       // ignore
     }
   }

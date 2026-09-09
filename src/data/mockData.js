@@ -2,7 +2,7 @@ export const INITIAL_PRODUCTS = [
   {
     id: 'prod-1',
     name: 'Hand-Painted Tree of Life Kalamkari Wall Hanging',
-    artisanName: 'Govindappa V.',
+    artisanName: 'Venkat Rao',
     artisanId: 'art-1',
     artisanLocation: 'Andhra Pradesh',
     craft: 'Kalamkari',
@@ -59,7 +59,7 @@ export const INITIAL_PRODUCTS = [
   {
     id: 'prod-4',
     name: 'Kondapalli Wooden Dancing Doll & Elephant Set',
-    artisanName: 'Govindappa V.',
+    artisanName: 'Venkat Rao',
     artisanId: 'art-1',
     artisanLocation: 'Andhra Pradesh',
     craft: 'Wooden Toys',
@@ -99,7 +99,7 @@ export const INITIAL_PRODUCTS = [
 export const INITIAL_ARTISANS = [
   {
     id: 'art-1',
-    name: 'Govindappa V.',
+    name: 'Venkat Rao',
     location: 'Kondapalli, Andhra Pradesh',
     craft: 'Wooden Toys & Kalamkari Art',
     experience: '28 years',
@@ -184,8 +184,8 @@ export const BULK_ORDER_DATA = {
   deadline: 'Sept 30, 2026',
   pricePerPiece: 300,
   artisans: [
-    { id: 'art-1', name: 'Govindappa V.', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 80, status: 'In Progress' },
-    { id: 'art-2', name: 'Venkat Rao', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 100, status: 'Completed' },
+    { id: 'art-1', name: 'Venkat Rao', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 80, status: 'In Progress' },
+    { id: 'art-2', name: 'Rameshwar K.', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 100, status: 'Completed' },
     { id: 'art-3', name: 'Srinivasulu M.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 100, status: 'Completed' },
     { id: 'art-4', name: 'Lakshmi Prasad', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 90, status: 'In Progress' },
     { id: 'art-5', name: 'Ramanathan K.', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80', assigned: 100, completed: 80, status: 'In Progress' }

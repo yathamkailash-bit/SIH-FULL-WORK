@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { broadcastDataUpdate, subscribeToRealtimeCollection } from '../services/firebase';
+import { broadcastDataUpdate } from '../services/firebase';
 
 const AuthContext = createContext();
 
@@ -11,7 +11,7 @@ const hashPin = async (pinStr) => {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (err) {
+  } catch {
     // Fallback simple obfuscation if crypto subtle is disabled
     return btoa(pinStr + '_salt');
   }
@@ -157,4 +157,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

@@ -17,7 +17,7 @@ export const AppDataProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
 
-  const [artisanOrders, setArtisanOrders] = useState(() => {
+  const [artisanOrders, _setArtisanOrders] = useState(() => {
     const saved = localStorage.getItem('kalakriti_artisan_orders');
     return saved ? JSON.parse(saved) : INITIAL_ARTISAN_ORDERS;
   });
@@ -27,7 +27,7 @@ export const AppDataProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : BULK_ORDER_DATA;
   });
 
-  const [notifications, setNotifications] = useState(() => {
+  const [notifications, _setNotifications] = useState(() => {
     const saved = localStorage.getItem('kalakriti_notifications');
     return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
   });
@@ -234,4 +234,5 @@ export const AppDataProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAppData = () => useContext(AppDataContext);

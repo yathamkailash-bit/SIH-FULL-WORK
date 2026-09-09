@@ -16,7 +16,7 @@ export const ProductListedSuccess = ({ product, onViewProduct, onAddAnother }) =
         spread: 70,
         origin: { y: 0.6 }
       });
-    } catch (_e) {
+    } catch {
       // ignore confetti failures
     }
 

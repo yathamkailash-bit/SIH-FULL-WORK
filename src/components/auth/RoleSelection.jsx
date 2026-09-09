@@ -12,6 +12,7 @@ export const RoleSelection = () => {
   useEffect(() => {
     // AI speaks the header question ONCE in the selected language when this screen appears
     speakPrompt(t('who_are_you'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRoleClick = (roleType) => {

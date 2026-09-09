@@ -5,7 +5,7 @@ import { STATE_LABOUR_RATES } from '../../data/stateLabourRates';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductInfo, description, onBack }) => {
+export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductInfo, description, _onBack }) => {
   const { speakPrompt } = useVoice();
   const { t } = useLanguage();
 

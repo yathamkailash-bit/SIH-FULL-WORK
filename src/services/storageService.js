@@ -40,7 +40,7 @@ export const storeProductImage = async (imageInput, filename = `prod_${Date.now(
       const blob = new Blob([u8arr], { type: mime });
       const objectUrl = URL.createObjectURL(blob);
       return objectUrl;
-    } catch (_e) {
+    } catch {
       return imageInput;
     }
   }
