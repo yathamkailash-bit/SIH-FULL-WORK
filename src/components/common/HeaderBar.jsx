@@ -2,12 +2,10 @@ import React from 'react';
 import { Volume2, VolumeX, Bell, ChevronLeft } from 'lucide-react';
 import { useVoice } from '../../context/VoiceContext';
 import { useAppData } from '../../context/AppDataContext';
-import { useAuth } from '../../context/AuthContext';
 
 export const HeaderBar = ({ title, showBack, onBack, onOpenNotifications }) => {
   const { isMuted, toggleMute } = useVoice();
   const { notifications } = useAppData();
-  const { role } = useAuth();
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
@@ -24,7 +22,6 @@ export const HeaderBar = ({ title, showBack, onBack, onOpenNotifications }) => {
           </button>
         ) : (
           <div className="flex items-center gap-2">
-            {/* Green stylized flower/leaf logo mark */}
             <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-white font-bold shadow-sm">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" fill="#15803D" stroke="#166534" />
@@ -50,7 +47,6 @@ export const HeaderBar = ({ title, showBack, onBack, onOpenNotifications }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Voice Speaker Mute/Unmute Control */}
         <button
           onClick={toggleMute}
           className={`w-9 h-9 rounded-full flex items-center justify-center transition shadow-2xs ${
@@ -63,7 +59,6 @@ export const HeaderBar = ({ title, showBack, onBack, onOpenNotifications }) => {
           {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} className="animate-pulse" />}
         </button>
 
-        {/* Notification Bell */}
         {onOpenNotifications && (
           <button
             onClick={onOpenNotifications}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Package, Mic, ChevronRight, Sparkles, HelpCircle, Settings, User, TrendingUp } from 'lucide-react';
+import { Camera, Package, Mic, ChevronRight, HelpCircle, Settings, User } from 'lucide-react';
 import { HeaderBar } from '../common/HeaderBar';
 import { BottomNav } from '../common/BottomNav';
 import { AddProductStepper } from './AddProductStepper';
@@ -20,6 +20,8 @@ export const ArtisanHome = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'add_product' | 'notifications' | 'bulk_tracker'
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  const displayName = user?.name || t('artisan_title') || 'Artisan';
 
   const handleActionClick = (action) => {
     if (action === 'add_product') {
@@ -65,7 +67,7 @@ export const ArtisanHome = () => {
                 <div className="bg-emerald-800 text-white rounded-3xl p-5 shadow-xl relative overflow-hidden flex items-center justify-between">
                   <div className="max-w-[210px] z-10">
                     <span className="text-[10px] font-bold tracking-widest text-emerald-200 uppercase block mb-1">
-                      Welcome, {user?.name || 'Govindappa V.'}
+                      {t('welcome') || 'Welcome'}, {displayName}
                     </span>
                     <h2 className="text-xl font-extrabold leading-tight">
                       {t('grow_business')}
@@ -73,7 +75,7 @@ export const ArtisanHome = () => {
                   </div>
 
                   <div className="w-20 h-20 rounded-full bg-emerald-700/60 border-2 border-emerald-400/30 flex items-center justify-center text-4xl shrink-0">
-                    👩‍🌾🏽
+                    👨‍🌾
                   </div>
                 </div>
 
@@ -86,7 +88,7 @@ export const ArtisanHome = () => {
                     <span className="w-3 h-3 rounded-full bg-white animate-ping"></span>
                     <div>
                       <span className="text-xs font-extrabold uppercase tracking-wider block text-amber-100">
-                        New Order Opportunity
+                        {t('new_big_order') || 'New Order Opportunity'}
                       </span>
                       <span className="text-sm font-extrabold">500 Wooden Toys Request</span>
                     </div>
@@ -173,10 +175,10 @@ export const ArtisanHome = () => {
                     👨‍🌾
                   </div>
                   <div>
-                    <h3 className="text-lg font-extrabold text-stone-900">Govindappa V.</h3>
-                    <p className="text-xs font-semibold text-stone-500">Master Artisan • Andhra Pradesh</p>
+                    <h3 className="text-lg font-extrabold text-stone-900">{displayName}</h3>
+                    <p className="text-xs font-semibold text-stone-500">Master Artisan • {user?.state || 'Andhra Pradesh'}</p>
                     <span className="inline-block text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md mt-1">
-                      Kondapalli Craft Specialist
+                      Handcraft Specialist
                     </span>
                   </div>
                 </div>
@@ -238,7 +240,7 @@ export const ArtisanHome = () => {
       <BigOrderAlertModal
         isOpen={showBigOrderAlert}
         onClose={() => setShowBigOrderAlert(false)}
-        onAccept={() => acceptBulkShare('art-1')}
+        onAccept={() => acceptBulkShare(user?.id || 'art-1')}
       />
     </div>
   );

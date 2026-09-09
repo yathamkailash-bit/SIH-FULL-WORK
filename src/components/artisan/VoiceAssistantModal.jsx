@@ -1,38 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Mic, X, Volume2, ArrowRight, AlertCircle } from 'lucide-react';
+import React, { useEffect, useCallback, useState } from 'react';
+import { Mic, X, Volume2, AlertCircle } from 'lucide-react';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
   const { isListening, speechText, startListening, speakPrompt, stopVoice, voiceError, isVoiceSupported } = useVoice();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [statusMessage, setStatusMessage] = useState("Tap mic to speak");
 
-  useEffect(() => {
-    if (isOpen) {
-      if (!isVoiceSupported) {
-        setStatusMessage("Voice recognition not supported in this browser");
-        return;
-      }
-      speakPrompt("I am listening. Speak your command.", () => {
-        handleStartMic();
-      });
-    } else {
-      stopVoice();
-    }
-  }, [isOpen]);
-
-  const handleStartMic = () => {
-    if (!isVoiceSupported) {
-      return;
-    }
-    setStatusMessage("Listening...");
-    startListening((finalTranscript) => {
-      processCommand(finalTranscript);
-    });
-  };
-
-  const processCommand = (text) => {
+  const processCommand = useCallback((text) => {
     const lower = text.toLowerCase();
     setStatusMessage(`Recognized: "${text}"`);
 
@@ -61,7 +37,30 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
         onActionTrigger('add_product');
       }, 1500);
     }
-  };
+  }, [speakPrompt, onClose, onActionTrigger]);
+
+  const handleStartMic = useCallback(() => {
+    if (!isVoiceSupported) return;
+    setStatusMessage("Listening...");
+    startListening((finalTranscript) => {
+      processCommand(finalTranscript);
+    });
+  }, [isVoiceSupported, startListening, processCommand]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!isVoiceSupported) {
+        setStatusMessage("Voice recognition not supported in this browser");
+        return;
+      }
+      speakPrompt("I am listening. Speak your command.", () => {
+        handleStartMic();
+      });
+    } else {
+      stopVoice();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -83,20 +82,17 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
           {t('speak_app')}
         </h3>
         
-        {/* Status or Error Message */}
         <p className={`text-xs font-semibold mt-1 ${voiceError || !isVoiceSupported ? 'text-amber-700' : 'text-emerald-700'}`}>
           {voiceError || statusMessage}
         </p>
 
-        {/* Browser compatibility warning */}
         {!isVoiceSupported && (
           <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 font-medium flex items-center gap-2 text-left">
             <AlertCircle size={18} className="shrink-0 text-amber-600" />
-            <span>Voice commands aren't supported in this browser — try Chrome or Edge.</span>
+            <span>Voice commands aren&apos;t supported in this browser — try Chrome or Edge.</span>
           </div>
         )}
 
-        {/* Error notification banner */}
         {voiceError && isVoiceSupported && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-800 font-medium flex items-center gap-2 text-left">
             <AlertCircle size={18} className="shrink-0 text-red-600" />
@@ -104,7 +100,6 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
           </div>
         )}
 
-        {/* Animated Mic Target */}
         <div className="my-6 relative flex items-center justify-center">
           <button
             onClick={handleStartMic}
@@ -123,12 +118,12 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
 
         {speechText && (
           <div className="p-3 bg-stone-100 rounded-xl text-xs font-medium text-stone-800 w-full mb-4">
-            "{speechText}"
+            &ldquo;{speechText}&rdquo;
           </div>
         )}
 
         <p className="text-[11px] text-stone-400 font-medium">
-          Say: "Add wooden toy", "Show my orders", or "View products"
+          Say: &quot;Add wooden toy&quot;, &quot;Show my orders&quot;, or &quot;View products&quot;
         </p>
       </div>
     </div>

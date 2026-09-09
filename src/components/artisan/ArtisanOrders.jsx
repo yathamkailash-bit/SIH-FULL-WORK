@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle2 } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 import { useLanguage } from '../../context/LanguageContext';
 

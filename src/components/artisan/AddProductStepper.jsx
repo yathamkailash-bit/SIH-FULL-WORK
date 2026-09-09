@@ -1,13 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Mic, Volume2, Sparkles, ChevronRight, Check, ArrowLeft, RefreshCw, Upload, X, Loader2, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Camera, Mic, Volume2, ChevronRight, Check, ArrowLeft, Upload, X, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { enhanceProductImage, checkAuthenticity } from '../../services/imageEnhancerService';
+import { generateMultilingualCatalog } from '../../services/catalogerService';
 import { PriceEstimatorView } from './PriceEstimatorView';
 import { ProductListedSuccess } from './ProductListedSuccess';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppData } from '../../context/AppDataContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const AddProductStepper = ({ onComplete, onCancel }) => {
+  const { user } = useAuth();
   const { speakPrompt, startListening, isListening } = useVoice();
   const { t } = useLanguage();
   const { addProduct } = useAppData();
@@ -29,6 +32,11 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
   const [enhancementError, setEnhancementError] = useState(null);
   const [detectedProductInfo, setDetectedProductInfo] = useState(null);
 
+  // Multilingual Auto-Cataloger State
+  const [isCataloging, setIsCataloging] = useState(false);
+  const [catalogError, setCatalogError] = useState(null);
+  const [bilingualDescription, setBilingualDescription] = useState({ descriptionEn: '', descriptionHi: '' });
+
   const [guidedStepIndex, setGuidedStepIndex] = useState(0);
   const [formData, setFormData] = useState({
     name: 'Kondapalli Wooden Toy Set',
@@ -38,7 +46,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     workersCount: 1,
     workingDays: 2,
     labourCost: 400,
-    state: 'Andhra Pradesh',
+    state: user?.state || 'Andhra Pradesh',
     price: 650
   });
 
@@ -52,17 +60,17 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     { key: 'labourCost', question: "What is your estimated labour cost? (in ₹)", defaultVal: 400 }
   ];
 
-  // Live Web Camera Control
+  // Live Web Camera Control — 1080p High Quality Resolution
   const startCamera = async () => {
     try {
       setIsCameraOpen(true);
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
       } catch (err) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
       }
       streamRef.current = stream;
       if (videoRef.current) {
@@ -87,13 +95,13 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 800;
-    canvas.height = video.videoHeight || 600;
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
 
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const capturedUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const capturedUrl = canvas.toDataURL('image/jpeg', 0.95);
     stopCamera();
 
     handlePhotoSelected(capturedUrl);
@@ -111,11 +119,6 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     reader.readAsDataURL(file);
   };
 
-  // UNIFIED FLOW ORDER:
-  // 1. user captures/selects photo
-  // 2. checkAuthenticity() runs first (show "Verifying photo..." loading state)
-  // 3. if authentic -> proceed to enhanceProductImage() step
-  // 4. if not authentic -> show warning banner & block button
   const handlePhotoSelected = async (originalImgSrc) => {
     setPhotoSrc(originalImgSrc);
     setEnhancedPhoto(null);
@@ -138,23 +141,28 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
 
       if (isUnauthentic) {
         speakPrompt("Warning: This photo appears to be a picture of a screen or print. Please take a direct photo of your actual product.");
-        return; // Block enhancement and block user from proceeding
+        return;
       }
 
-      // Step 2: AI Enhancement, Hand Removal & Professional Studio Image Generation
+      // Step 2: AI Enhancement & Hand Removal
       setIsEnhancing(true);
       speakPrompt("Photo verified! AI is generating a professional product image...");
 
       const result = await enhanceProductImage(originalImgSrc);
 
-      // result = { dataUrl: string, productInfo: { product, category, backgroundStyle } }
       setEnhancedPhoto(result.dataUrl);
       setDetectedProductInfo(result.productInfo);
+      if (result.productInfo?.product) {
+        setFormData(prev => ({
+          ...prev,
+          name: result.productInfo.product,
+          craft: result.productInfo.category || prev.craft
+        }));
+      }
       speakPrompt(`Product identified as ${result.productInfo?.product || 'handcrafted item'}. Studio image ready!`);
 
     } catch (err) {
       console.error('[KalaKriti] ❌ Enhancement pipeline error:', err.message);
-      // Surface actual error — do NOT silently fall back to original image
       setEnhancementError(err.message || 'AI product isolation failed. Please try another photo.');
       setIsEnhancing(false);
       speakPrompt("AI processing failed. Please try another photo.");
@@ -164,24 +172,41 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     }
   };
 
-
-  // Simulated Re-photograph Test Trigger (for demo testing)
-  const triggerSimulatedScreenPhotoTest = () => {
-    const fakeScreenCheck = {
-      isAuthentic: false,
-      confidence: "high",
-      reason: "Moire pattern grid lines and screen bezel reflections detected consistent with a monitor/phone display."
-    };
-    setAuthenticityResult(fakeScreenCheck);
-    setIsAuthenticating(false);
-    setIsEnhancing(false);
-    speakPrompt("Warning: Screen photo detected. Please take a direct photo of your actual product.");
-  };
-
   const handleApplyEnhancement = () => {
     setShowEnhancementComparison(false);
     speakPrompt("Photo enhanced! Advancing to product details.");
     setStep(2);
+  };
+
+  // MULTILINGUAL AUTO-CATALOGER FLOW
+  const handleSpokenDescriptionCatalog = () => {
+    setCatalogError(null);
+    speakPrompt("Tell me about the product", () => {
+      startListening(async (transcript) => {
+        if (!transcript) return;
+        setIsCataloging(true);
+        speakPrompt("Writing your product description...");
+
+        try {
+          const res = await generateMultilingualCatalog({
+            productName: formData.name,
+            craft: formData.craft,
+            material: formData.material,
+            spokenText: transcript
+          });
+
+          setBilingualDescription(res);
+          setIsCataloging(false);
+          speakPrompt("Descriptions generated in English and Hindi!");
+          setStep(2);
+        } catch (err) {
+          console.error('[KalaKriti] Auto-cataloger error:', err.message);
+          setIsCataloging(false);
+          setCatalogError(err.message || "Failed to generate AI descriptions. Please try again.");
+          speakPrompt("Description generation failed. Please try again.");
+        }
+      });
+    });
   };
 
   // Voice Guided Q&A
@@ -205,26 +230,28 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
     }
   };
 
-  const handleConfirmPrice = (finalPrice, estimateData) => {
+  const handleConfirmPrice = async (finalPrice, estimateData) => {
     const finalProduct = {
       name: formData.name,
-      artisanName: 'Govindappa V.',
-      artisanId: 'art-1',
-      artisanLocation: formData.state || 'Andhra Pradesh',
+      artisanName: user?.name || 'Artisan',
+      artisanId: user?.id || 'art-1',
+      artisanLocation: formData.state || user?.state || 'Andhra Pradesh',
       craft: formData.craft,
-      tags: ['Handmade', 'Kondapalli', formData.state || 'Andhra Pradesh'],
+      tags: ['Handmade', formData.craft || 'Craft', formData.state || 'Andhra Pradesh'],
       price: finalPrice,
       originalPrice: Math.round(finalPrice * 1.2),
       discountPercent: 17,
       rating: 5.0,
       reviewsCount: 1,
       image: enhancedPhoto || photoSrc,
-      description: `Authentic handcrafted ${formData.craft} made with ${formData.material}.`,
+      description: bilingualDescription.descriptionEn || `Authentic handcrafted ${formData.craft} made with ${formData.material}.`,
+      descriptionEn: bilingualDescription.descriptionEn || `Authentic handcrafted ${formData.craft} made with ${formData.material}.`,
+      descriptionHi: bilingualDescription.descriptionHi || `प्रामाणिक हस्तनिर्मित ${formData.craft} जो ${formData.material} से बना है।`,
       material: formData.material,
       inStock: true
     };
 
-    const saved = addProduct(finalProduct);
+    const saved = await addProduct(finalProduct);
     setCreatedProduct(saved);
     setStep(4);
   };
@@ -320,7 +347,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
               <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-between p-4 animate-in fade-in">
                 <div className="w-full flex justify-between items-center text-white px-2 pt-2">
                   <span className="text-sm font-bold flex items-center gap-2">
-                    <Camera size={18} className="text-emerald-400" /> Live Web Camera
+                    <Camera size={18} className="text-emerald-400" /> Live Web Camera (1080p HD)
                   </span>
                   <button
                     onClick={stopCamera}
@@ -366,7 +393,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
                     <span className="text-[10px] text-stone-400">Checking for moire, glare, and screen reflections</span>
                   </div>
                 ) : isBlockedByAuthenticity ? (
-                  /* 2. AUTHENTICITY WARNING BANNER (RED/AMBER BACKGROUND) & BUTTON BLOCKED */
+                  /* 2. AUTHENTICITY WARNING BANNER */
                   <div className="bg-amber-500/20 border-2 border-amber-400 text-amber-100 p-4 rounded-2xl space-y-2">
                     <div className="flex items-start gap-2.5">
                       <AlertTriangle size={22} className="text-amber-400 shrink-0 mt-0.5" />
@@ -397,7 +424,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
                     </div>
                   </div>
                 ) : enhancementError ? (
-                  /* ERROR STATE — AI generation failed, show clear message, no silent fallback */
+                  /* ERROR STATE */
                   <div className="bg-red-900/30 border-2 border-red-500 text-red-100 p-4 rounded-2xl space-y-2">
                     <div className="flex items-start gap-2.5">
                       <AlertTriangle size={22} className="text-red-400 shrink-0 mt-0.5" />
@@ -418,11 +445,6 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
                         <Camera size={14} />
                         <span>Try Another Photo</span>
                       </button>
-                      <label className="flex-1 py-2.5 bg-stone-700 hover:bg-stone-600 text-white rounded-xl font-extrabold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
-                        <Upload size={14} />
-                        <span>Choose Gallery</span>
-                        <input type="file" accept="image/*" onChange={handleGalleryUpload} className="hidden" />
-                      </label>
                     </div>
                   </div>
                 ) : isEnhancing ? (
@@ -483,38 +505,35 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
               </div>
             )}
 
+            {/* GATED MICROPHONE BUTTON FOR MULTILINGUAL AUTO-CATALOGER (Rule 2.8: Render ONLY when enhancedPhoto && !isBlockedByAuthenticity) */}
+            {enhancedPhoto && !isBlockedByAuthenticity && (
+              <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in">
+                <span className="text-xs text-stone-400 font-bold uppercase tracking-widest">or</span>
 
-            {/* Test Simulation Trigger for Demo Testing */}
-            <div className="mt-3 text-center">
-              <button
-                onClick={triggerSimulatedScreenPhotoTest}
-                className="text-[10px] font-bold text-stone-400 hover:text-stone-600 underline"
-              >
-                [Demo Test] Simulate Screen Photo Detection Warning
-              </button>
-            </div>
+                {isCataloging ? (
+                  <div className="w-full py-4 bg-amber-500/20 border border-amber-400 text-amber-900 rounded-2xl flex items-center justify-center gap-2 text-xs font-extrabold">
+                    <Loader2 size={18} className="animate-spin text-amber-600" />
+                    <span>Writing your product description...</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSpokenDescriptionCatalog}
+                    className={`w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 ${
+                      isListening ? 'mic-pulse' : ''
+                    }`}
+                  >
+                    <Mic size={18} />
+                    <span>🎤 Tell me about the product</span>
+                  </button>
+                )}
 
-            {/* Speak to Add Product Action */}
-            <div className="mt-3 flex flex-col items-center gap-2">
-              <span className="text-xs text-stone-400 font-bold uppercase tracking-widest">or</span>
-
-              <button
-                onClick={() => {
-                  speakPrompt("Speak your product name, for example: wooden toy elephant", () => {
-                    startListening((txt) => {
-                      setFormData(prev => ({ ...prev, name: txt }));
-                      setStep(2);
-                    });
-                  });
-                }}
-                className={`w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 ${
-                  isListening ? 'mic-pulse' : ''
-                }`}
-              >
-                <Mic size={18} />
-                <span>🎤 Speak product name to add</span>
-              </button>
-            </div>
+                {catalogError && (
+                  <div className="w-full p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 text-center">
+                    ⚠️ {catalogError}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 pb-2">
@@ -539,8 +558,19 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
               Answer 1-at-a-time guided questions (Voice or Type)
             </p>
 
+            {/* Bilingual AI Generated Description Banner if available */}
+            {(bilingualDescription.descriptionEn || bilingualDescription.descriptionHi) && (
+              <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-1 text-xs">
+                <span className="font-extrabold text-emerald-800 uppercase text-[10px] tracking-wider block">
+                  ✨ AI Multilingual Auto-Cataloger Description
+                </span>
+                <p className="text-stone-800 font-medium"><strong className="text-emerald-700">EN:</strong> {bilingualDescription.descriptionEn}</p>
+                <p className="text-stone-800 font-medium"><strong className="text-emerald-700">HI:</strong> {bilingualDescription.descriptionHi}</p>
+              </div>
+            )}
+
             {/* Guided Question Card */}
-            <div className="mt-5 bg-white border-2 border-emerald-600/30 rounded-3xl p-5 shadow-lg relative">
+            <div className="mt-4 bg-white border-2 border-emerald-600/30 rounded-3xl p-5 shadow-lg relative">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-3">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
                   Question {guidedStepIndex + 1} of {guidedQuestions.length}
@@ -567,8 +597,8 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
               />
             </div>
 
-            {/* Recognized Summary Card */}
-            <div className="mt-5 p-4 bg-stone-100 rounded-2xl space-y-2 text-xs font-semibold text-stone-700">
+            {/* Captured Details */}
+            <div className="mt-4 p-4 bg-stone-100 rounded-2xl space-y-2 text-xs font-semibold text-stone-700">
               <div className="text-[10px] uppercase font-bold text-stone-400">Captured Details:</div>
               <div>Material: <span className="font-bold text-stone-900">{formData.material}</span></div>
               <div>Material Cost: <span className="font-bold text-stone-900">₹{formData.materialCost}</span></div>
@@ -593,6 +623,8 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
       {step === 3 && (
         <PriceEstimatorView
           formData={formData}
+          detectedProductInfo={detectedProductInfo}
+          description={bilingualDescription.descriptionEn}
           onConfirmPrice={handleConfirmPrice}
           onBack={() => setStep(2)}
         />

@@ -18,10 +18,6 @@ export const LanguageSelection = () => {
     }, 400);
   };
 
-  const handleSpeakHeader = () => {
-    speakPrompt("Choose your language. अपनी भाषा चुनें.");
-  };
-
   const handleListenAll = () => {
     const allNames = LANGUAGES.map(l => l.english).join(', ');
     speakPrompt(`Available languages: ${allNames}`);
@@ -37,12 +33,6 @@ export const LanguageSelection = () => {
             className="w-9 h-9 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-700 shadow-2xs hover:bg-stone-50"
           >
             <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={handleSpeakHeader}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs shadow-2xs hover:bg-emerald-200"
-          >
-            <Volume2 size={16} className="animate-pulse" /> Read Aloud
           </button>
         </div>
 

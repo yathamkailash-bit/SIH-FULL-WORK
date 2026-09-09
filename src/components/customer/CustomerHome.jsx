@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Sparkles, Heart, Compass, Users, ShoppingCart, User, MapPin, ChevronRight, Package, HelpCircle, Settings, LogOut } from 'lucide-react';
+import { Search, Sparkles, Heart, MapPin, ChevronRight, Package, HelpCircle, Settings, LogOut } from 'lucide-react';
 import { HeaderBar } from '../common/HeaderBar';
 import { BottomNav } from '../common/BottomNav';
 import { CustomerProductCard } from './CustomerProductCard';

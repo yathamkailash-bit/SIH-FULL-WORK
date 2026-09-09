@@ -1,11 +1,13 @@
 import React from 'react';
-import { X, Heart, ShoppingBag, ShieldCheck, MapPin, Star, Truck } from 'lucide-react';
+import { X, Heart, ShoppingBag, ShieldCheck, MapPin, Star } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 import { useVoice } from '../../context/VoiceContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const ProductDetailsModal = ({ product, isOpen, onClose }) => {
   const { favorites, toggleFavorite, addToCart } = useAppData();
   const { speakPrompt } = useVoice();
+  const { language } = useLanguage();
 
   if (!isOpen || !product) return null;
 
@@ -15,6 +17,10 @@ export const ProductDetailsModal = ({ product, isOpen, onClose }) => {
     addToCart(product);
     speakPrompt(`Added ${product.name} to your cart.`);
   };
+
+  const displayDescription = language === 'hi' && product.descriptionHi 
+    ? product.descriptionHi 
+    : (product.descriptionEn || product.description || 'Authentic Indian handcrafted product.');
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end justify-center">
@@ -98,7 +104,7 @@ export const ProductDetailsModal = ({ product, isOpen, onClose }) => {
               Craft Story & Materials
             </h4>
             <p className="text-xs text-stone-700 font-medium leading-relaxed bg-white p-4 rounded-2xl border border-stone-200 shadow-2xs">
-              {product.description}
+              {displayDescription}
             </p>
           </div>
         </div>

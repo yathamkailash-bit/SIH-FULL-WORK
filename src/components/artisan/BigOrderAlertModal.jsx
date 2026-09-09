@@ -1,19 +1,17 @@
 import React, { useEffect } from 'react';
 import { Volume2, Users, Package, Calendar, Check, X } from 'lucide-react';
 import { useVoice } from '../../context/VoiceContext';
-import { useAppData } from '../../context/AppDataContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const BigOrderAlertModal = ({ isOpen, onClose, onAccept }) => {
   const { speakPrompt } = useVoice();
-  const { bulkOrder } = useAppData();
   const { t } = useLanguage();
 
   useEffect(() => {
     if (isOpen) {
-      // Exactly ONE short voice notification when alert first appears
       speakPrompt("You have a new big order. 500 wooden toys required.");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -22,7 +20,7 @@ export const BigOrderAlertModal = ({ isOpen, onClose, onAccept }) => {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl p-6 flex flex-col shadow-2xl relative animate-in fade-in zoom-in duration-300 border-2 border-emerald-600/30">
         
-        {/* Top Header Row with Red "New" Badge */}
+        {/* Top Header Row */}
         <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-extrabold text-stone-900">
@@ -41,7 +39,7 @@ export const BigOrderAlertModal = ({ isOpen, onClose, onAccept }) => {
           </button>
         </div>
 
-        {/* Group Glyph & Description */}
+        {/* Description */}
         <div className="flex items-start gap-3.5 my-2">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0 shadow-sm">
             <Users size={24} />
@@ -56,7 +54,7 @@ export const BigOrderAlertModal = ({ isOpen, onClose, onAccept }) => {
           </div>
         </div>
 
-        {/* Green Highlight Box: "Your possible share — 100 pieces" */}
+        {/* Possible share highlight */}
         <div className="my-4 bg-emerald-700 text-white rounded-2xl p-4 text-center shadow-lg">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-200 block">
             {t('possible_share')}

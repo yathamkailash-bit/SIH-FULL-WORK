@@ -1,11 +1,9 @@
 import React from 'react';
-import { Package, CheckCircle2, Clock } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
-import { useLanguage } from '../../context/LanguageContext';
 
 export const CustomerOrders = () => {
   const { customerOrders } = useAppData();
-  const { t } = useLanguage();
 
   return (
     <div className="flex-1 flex flex-col bg-[#FAF7F2] p-4 select-none">
@@ -43,7 +41,7 @@ export const CustomerOrders = () => {
               ))}
             </div>
 
-            {/* Visual Delivery Tracker: ✓ Order Placed → ✓ Confirmed → 🟢 In Production → ⚪ Shipped → ⚪ Delivered */}
+            {/* Visual Delivery Tracker */}
             <div className="pt-3 border-t border-stone-100">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block mb-3">
                 Live Delivery Tracker

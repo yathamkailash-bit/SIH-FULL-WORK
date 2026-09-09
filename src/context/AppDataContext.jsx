@@ -6,6 +6,8 @@ import {
   BULK_ORDER_DATA, 
   INITIAL_NOTIFICATIONS 
 } from '../data/mockData';
+import { subscribeToRealtimeCollection, broadcastDataUpdate } from '../services/firebase';
+import { storeProductImage } from '../services/storageService';
 
 const AppDataContext = createContext();
 
@@ -63,20 +65,67 @@ export const AppDataProvider = ({ children }) => {
 
   const [showBigOrderAlert, setShowBigOrderAlert] = useState(false);
 
-  // Sync state to local storage
-  useEffect(() => { localStorage.setItem('kalakriti_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('kalakriti_artisan_orders', JSON.stringify(artisanOrders)); }, [artisanOrders]);
-  useEffect(() => { localStorage.setItem('kalakriti_bulk_order', JSON.stringify(bulkOrder)); }, [bulkOrder]);
-  useEffect(() => { localStorage.setItem('kalakriti_notifications', JSON.stringify(notifications)); }, [notifications]);
-  useEffect(() => { localStorage.setItem('kalakriti_cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem('kalakriti_favorites', JSON.stringify(favorites)); }, [favorites]);
-  useEffect(() => { localStorage.setItem('kalakriti_customer_orders', JSON.stringify(customerOrders)); }, [customerOrders]);
+  // Sync state to local storage and cross-device/tab Firestore
+  useEffect(() => {
+    localStorage.setItem('kalakriti_products', JSON.stringify(products));
+    broadcastDataUpdate('products', products);
+  }, [products]);
 
-  const addProduct = (newProd) => {
-    const created = {
-      id: 'prod-' + Date.now(),
-      ...newProd
+  useEffect(() => {
+    localStorage.setItem('kalakriti_artisan_orders', JSON.stringify(artisanOrders));
+    broadcastDataUpdate('artisan_orders', artisanOrders);
+  }, [artisanOrders]);
+
+  useEffect(() => {
+    localStorage.setItem('kalakriti_bulk_order', JSON.stringify(bulkOrder));
+  }, [bulkOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('kalakriti_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('kalakriti_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('kalakriti_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem('kalakriti_customer_orders', JSON.stringify(customerOrders));
+    broadcastDataUpdate('customer_orders', customerOrders);
+  }, [customerOrders]);
+
+  // Firestore Realtime Subscription Listeners
+  useEffect(() => {
+    const unsubProducts = subscribeToRealtimeCollection('products', (updatedProducts) => {
+      setProducts(updatedProducts);
+    });
+
+    const unsubOrders = subscribeToRealtimeCollection('customer_orders', (updatedOrders) => {
+      setCustomerOrders(updatedOrders);
+    });
+
+    return () => {
+      if (unsubProducts) unsubProducts();
+      if (unsubOrders) unsubOrders();
     };
+  }, []);
+
+  const addProduct = async (newProd) => {
+    const prodId = 'prod-' + Date.now();
+    // Convert base64 data URLs to Firebase Storage URL or Blob URL to prevent localStorage quota crashes
+    const imageUrl = await storeProductImage(newProd.image, prodId);
+
+    const created = {
+      id: prodId,
+      ...newProd,
+      image: imageUrl,
+      descriptionEn: newProd.descriptionEn || newProd.description || '',
+      descriptionHi: newProd.descriptionHi || newProd.description || ''
+    };
+
     setProducts(prev => [created, ...prev]);
     return created;
   };

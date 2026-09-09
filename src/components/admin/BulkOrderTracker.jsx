@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Package, Users, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, Clock } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 
 export const BulkOrderTracker = ({ onBack }) => {

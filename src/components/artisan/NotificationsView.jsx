@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, ChevronRight, Package, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Package, Sparkles } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 import { useLanguage } from '../../context/LanguageContext';
 

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Users, Package, TrendingUp, Layers, Bell, LogOut } from 'lucide-react';
+import { ShieldCheck, Users, Package, LogOut } from 'lucide-react';
 import { BulkOrderTracker } from './BulkOrderTracker';
 import { useAuth } from '../../context/AuthContext';
 import { useAppData } from '../../context/AppDataContext';
 
 export const AdminDashboard = () => {
   const { logout } = useAuth();
-  const { artisans, products, artisanOrders } = useAppData();
+  const { artisans, products } = useAppData();
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'bulk_order' | 'artisans' | 'reports'
 
   return (

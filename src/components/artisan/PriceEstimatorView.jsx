@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import { Volume2, Lightbulb, Check, Edit2, ArrowRight } from 'lucide-react';
-import { calculateSuggestedPrice } from '../../services/priceEstimatorService';
+import React, { useState, useEffect } from 'react';
+import { Volume2, Lightbulb, Check, Edit2, TrendingUp } from 'lucide-react';
+import { calculateSuggestedPrice, getAIMarketPriceSuggestion } from '../../services/priceEstimatorService';
 import { STATE_LABOUR_RATES } from '../../data/stateLabourRates';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
+export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductInfo, description, onBack }) => {
   const { speakPrompt } = useVoice();
   const { t } = useLanguage();
 
   const [selectedState, setSelectedState] = useState(formData.state || 'Andhra Pradesh');
   const [customPrice, setCustomPrice] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+
+  const [marketAiResult, setMarketAiResult] = useState(null);
+  const [isMarketAiLoading, setIsMarketAiLoading] = useState(false);
 
   const estimate = calculateSuggestedPrice({
     materialCost: formData.materialCost || 250,
@@ -22,10 +25,33 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
     customLabourRate: formData.labourCost || null
   });
 
-  const finalPrice = isEditing && customPrice ? Number(customPrice) : estimate.recommendedPrice;
+  const costFloorPrice = estimate.costFloorPrice || estimate.recommendedPrice;
+
+  // Run AI Market Price Suggestion when mounted or state changes
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMarketPrice = async () => {
+      setIsMarketAiLoading(true);
+      const res = await getAIMarketPriceSuggestion({
+        productInfo: detectedProductInfo || { product: formData.name, category: formData.craft },
+        description: description || formData.description || '',
+        costFloorPrice: costFloorPrice
+      });
+      if (isMounted) {
+        setMarketAiResult(res);
+        setIsMarketAiLoading(false);
+      }
+    };
+    fetchMarketPrice();
+    return () => { isMounted = false; };
+  }, [selectedState, costFloorPrice, detectedProductInfo, description, formData.name, formData.craft, formData.description]);
+
+  const finalPrice = isEditing && customPrice 
+    ? Number(customPrice) 
+    : (marketAiResult?.minMarketPrice || costFloorPrice);
 
   const handleReadAloud = () => {
-    speakPrompt(`Recommended price is ${finalPrice} Rupees. Cost breakdown: Material ${estimate.materialCost}, Labour ${estimate.labourCost}, logistics ${estimate.logisticsAndPlatformFee}.`);
+    speakPrompt(`Fair cost floor is ${costFloorPrice} Rupees. AI suggested market price range is ${marketAiResult?.minMarketPrice || costFloorPrice} to ${marketAiResult?.maxMarketPrice || Math.round(costFloorPrice * 1.3)} Rupees.`);
   };
 
   const handleConfirm = () => {
@@ -39,7 +65,7 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
           {t('suggested_price')}
         </h2>
         <p className="text-xs text-stone-500 font-medium mt-1">
-          Based on your craft materials, working days, and {selectedState} labour rates.
+          Fair cost floor + AI Market Trend analysis for handcrafted items.
         </p>
 
         {/* State Selector */}
@@ -56,29 +82,64 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
           </select>
         </div>
 
-        {/* Recommended Price Highlight Box */}
-        <div className="mt-5 bg-emerald-700 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden text-center">
-          <div className="absolute top-3 right-3">
-            <button
-              onClick={handleReadAloud}
-              className="w-8 h-8 rounded-full bg-emerald-800 flex items-center justify-center text-emerald-100 hover:bg-emerald-600 transition"
-              title="Read price aloud"
-            >
-              <Volume2 size={18} className="animate-pulse" />
-            </button>
+        {/* DUAL PRICING HIGHLIGHT BOX */}
+        <div className="mt-5 space-y-3">
+          {/* Card 1: Fair Cost Floor */}
+          <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-500 block">
+                Your Fair-Cost Floor (Minimum)
+              </span>
+              <div className="text-xl font-extrabold text-stone-900 mt-0.5">
+                ₹{costFloorPrice}
+              </div>
+            </div>
+            <span className="text-xs font-bold px-2.5 py-1 bg-stone-100 text-stone-700 rounded-lg">
+              Cost + Margin
+            </span>
           </div>
 
-          <span className="inline-block px-3 py-1 bg-emerald-800 text-emerald-200 text-xs font-bold rounded-full uppercase tracking-wider mb-2">
-            {t('recommended')}
-          </span>
+          {/* Card 2: AI Market Price Suggestion */}
+          <div className="bg-emerald-800 text-white rounded-3xl p-5 shadow-xl relative overflow-hidden text-center">
+            <div className="absolute top-3 right-3">
+              <button
+                onClick={handleReadAloud}
+                className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-emerald-100 hover:bg-emerald-600 transition"
+                title="Read price aloud"
+              >
+                <Volume2 size={18} className="animate-pulse" />
+              </button>
+            </div>
 
-          <div className="text-4xl font-extrabold tracking-tight">
-            ₹{finalPrice}
+            <div className="flex items-center justify-center gap-1 text-emerald-200 text-xs font-bold uppercase tracking-wider mb-2">
+              <TrendingUp size={16} />
+              <span>AI-Suggested Market Price</span>
+            </div>
+
+            {isMarketAiLoading ? (
+              <div className="py-2 text-xs font-bold text-emerald-200 animate-pulse">
+                Analyzing e-commerce market trends...
+              </div>
+            ) : marketAiResult?.success ? (
+              <div>
+                <div className="text-3xl font-extrabold tracking-tight">
+                  ₹{marketAiResult.minMarketPrice} – ₹{marketAiResult.maxMarketPrice}
+                </div>
+                <p className="text-[11px] text-emerald-200 font-medium mt-1">
+                  {marketAiResult.reasoning}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="text-3xl font-extrabold tracking-tight">
+                  ₹{marketAiResult?.minMarketPrice || costFloorPrice}
+                </div>
+                <p className="text-[11px] text-amber-300 font-medium mt-1">
+                  ⚠️ {marketAiResult?.note || "Market suggestion unavailable, showing cost-based price"}
+                </p>
+              </div>
+            )}
           </div>
-
-          <p className="text-xs text-emerald-200 font-medium mt-1">
-            Suggested range: ₹{estimate.minPrice} – ₹{estimate.maxPrice}
-          </p>
         </div>
 
         {/* Cost Breakdown Card */}
@@ -121,12 +182,12 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, onBack }) => {
         {/* Manual Price Edit Toggle */}
         {isEditing ? (
           <div className="mt-4 p-3 bg-white rounded-2xl border border-emerald-300">
-            <label className="block text-xs font-bold text-stone-700 mb-1">Set Your Custom Price (₹)</label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">Set Your Custom Selling Price (₹)</label>
             <input
               type="number"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              placeholder={`Default ₹${estimate.recommendedPrice}`}
+              placeholder={`Default ₹${finalPrice}`}
               className="w-full p-2 border border-stone-300 rounded-xl text-base font-bold text-stone-900 focus:outline-none focus:border-emerald-600"
             />
           </div>
