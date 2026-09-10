@@ -33,12 +33,7 @@ export const Splash = () => {
           ARTISAN HERITAGE
         </p>
 
-        {/* 3 Tagline Lines */}
-        <div className="mt-4 space-y-0.5 text-center font-bold text-[#3B4E68] text-sm tracking-wide">
-          <p>Our Heritage</p>
-          <p>Your Hands</p>
-          <p>A Brighter Tomorrow</p>
-        </div>
+
       </div>
 
       {/* Center Static Image Illustration */}
@@ -53,8 +48,9 @@ export const Splash = () => {
       {/* Bottom Pinned Green Pill Button */}
       <div className="w-full pb-4 z-10">
         <button
+          type="button"
           onClick={() => setCurrentStep('language')}
-          className="w-full py-4 px-6 bg-[#047857] hover:bg-[#065F46] active:scale-[0.99] text-white rounded-full font-bold text-base shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 transition-all"
+          className="w-full py-4 px-6 bg-[#047857] hover:bg-[#065F46] active:scale-[0.99] text-white rounded-full font-bold text-base shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <span>{t('get_started') || 'Get Started'}</span>
           <ArrowRight size={20} />

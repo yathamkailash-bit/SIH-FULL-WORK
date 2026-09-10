@@ -93,7 +93,7 @@ Return ONLY a JSON object in this exact format with no extra text:
   "reasoning": "<1 short sentence explaining market demand and artisan craftsmanship value>"
 }`;
 
-  const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  const textModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
 
   for (const model of textModels) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;

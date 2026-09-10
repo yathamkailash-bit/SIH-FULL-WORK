@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export const AddProductStepper = ({ onComplete, onCancel }) => {
   const { user } = useAuth();
-  const { speakPrompt, startListening, isListening } = useVoice();
+  const { speakPrompt, startListening, isListening, voiceError, speechText, setVoiceError } = useVoice();
   const { t } = useLanguage();
   const { addProduct } = useAppData();
 
@@ -181,6 +181,17 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
   // MULTILINGUAL AUTO-CATALOGER FLOW
   const [typedDescription, setTypedDescription] = useState('');
 
+  const findNextGuidedIndex = (fromIndex, currentData) => {
+    for (let i = fromIndex; i < guidedQuestions.length; i++) {
+      const k = guidedQuestions[i].key;
+      const val = currentData[k];
+      if (val === undefined || val === null || val === '') {
+        return i;
+      }
+    }
+    return -1;
+  };
+
   const processProductDescription = async (textInput) => {
     if (!textInput || !textInput.trim()) return;
     setIsCataloging(true);
@@ -200,15 +211,24 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
         descriptionHi: res.descriptionHi
       });
 
-      setFormData(prev => ({
-        ...prev,
-        name: res.name || prev.name,
-        craft: res.craft || prev.craft,
-        material: res.material || prev.material,
-        labourCost: res.labourCost || prev.labourCost
-      }));
+      const updatedFormData = {
+        ...formData,
+        name: res.name || formData.name,
+        craft: res.craft || formData.craft,
+        material: res.material || formData.material,
+        labourCost: res.labourCost || formData.labourCost
+      };
 
+      setFormData(updatedFormData);
       setIsCataloging(false);
+
+      const nextUnfilled = findNextGuidedIndex(0, updatedFormData);
+      if (nextUnfilled !== -1) {
+        setGuidedStepIndex(nextUnfilled);
+      } else {
+        setGuidedStepIndex(0);
+      }
+
       speakPrompt("Product details auto-filled! Advancing to step 2.");
       setStep(2);
     } catch (err) {
@@ -221,6 +241,7 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
 
   const handleSpokenDescriptionCatalog = () => {
     setCatalogError(null);
+    if (setVoiceError) setVoiceError(null);
     speakPrompt("Tell me about the product", () => {
       startListening((transcript) => {
         if (transcript) {
@@ -241,7 +262,12 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
   };
 
   const handleNextGuidedQuestion = () => {
-    if (guidedStepIndex < guidedQuestions.length - 1) {
+    const nextUnfilled = findNextGuidedIndex(guidedStepIndex + 1, formData);
+    if (nextUnfilled !== -1) {
+      setGuidedStepIndex(nextUnfilled);
+      const nextQ = guidedQuestions[nextUnfilled];
+      speakPrompt(nextQ.question);
+    } else if (guidedStepIndex < guidedQuestions.length - 1) {
       setGuidedStepIndex(prev => prev + 1);
       const nextQ = guidedQuestions[guidedStepIndex + 1];
       speakPrompt(nextQ.question);
@@ -543,12 +569,25 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
                     <button
                       onClick={handleSpokenDescriptionCatalog}
                       className={`w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition ${
-                        isListening ? 'mic-pulse' : ''
+                        isListening ? 'bg-red-600 animate-pulse' : ''
                       }`}
                     >
                       <Mic size={18} />
-                      <span>🎤 Tap to Speak Description</span>
+                      <span>{isListening ? 'Listening...' : '🎤 Tap to Speak Description'}</span>
                     </button>
+
+                    {isListening && (
+                      <div className="w-full p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 font-semibold text-center animate-pulse">
+                        🎙️ Listening... {speechText ? <span className="font-bold text-emerald-950">"{speechText}"</span> : <em>Speak your product description clearly</em>}
+                      </div>
+                    )}
+
+                    {voiceError && (
+                      <div className="w-full p-2.5 bg-red-50 border border-red-300 rounded-xl text-xs font-semibold text-red-700 text-center flex items-center justify-center gap-1.5">
+                        <AlertTriangle size={14} className="shrink-0" />
+                        <span>{voiceError}</span>
+                      </div>
+                    )}
 
                     <div className="flex gap-2">
                       <input
@@ -576,8 +615,22 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
                 )}
 
                 {catalogError && (
-                  <div className="w-full p-2 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 text-center">
-                    ⚠️ {catalogError}
+                  <div className="w-full p-3 bg-red-50 border border-red-200 rounded-2xl space-y-2 text-center">
+                    <p className="text-xs font-semibold text-red-700">⚠️ {catalogError}</p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={handleSpokenDescriptionCatalog}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs"
+                      >
+                        Retry Voice Input
+                      </button>
+                      <button
+                        onClick={() => setStep(2)}
+                        className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold rounded-xl"
+                      >
+                        Continue Manually
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

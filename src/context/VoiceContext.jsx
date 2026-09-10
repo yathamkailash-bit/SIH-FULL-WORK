@@ -24,8 +24,22 @@ export const VoiceProvider = ({ children }) => {
   };
 
   const speakPrompt = (text, onEnd) => {
-    if (!isMuted) {
-      voiceService.speak(text, language, onEnd);
+    if (!isMuted && text) {
+      let called = false;
+      const safeOnEnd = () => {
+        if (!called) {
+          called = true;
+          if (onEnd) onEnd();
+        }
+      };
+
+      // 4.5s safety timeout: Chrome's speechSynthesis.onend often fails to fire.
+      const timer = setTimeout(safeOnEnd, 4500);
+
+      voiceService.speak(text, language, () => {
+        clearTimeout(timer);
+        safeOnEnd();
+      });
     } else if (onEnd) {
       // still advance the flow even when muted
       onEnd();
@@ -44,6 +58,22 @@ export const VoiceProvider = ({ children }) => {
       setVoiceError(unsupportedMsg);
       if (onErrorCallback) onErrorCallback(unsupportedMsg);
       return { stop: () => {} };
+    }
+
+    console.log('[KalaKriti] 🎙️ Starting voice recognition listening...');
+
+    if (navigator.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          console.log('[KalaKriti] ✅ Microphone access granted');
+          stream.getTracks().forEach(t => t.stop());
+        })
+        .catch((err) => {
+          console.warn('[KalaKriti] ❌ Microphone permission denied/failed:', err);
+          const permError = "Microphone permission denied. Please allow microphone access in browser settings.";
+          setVoiceError(permError);
+          if (onErrorCallback) onErrorCallback(permError);
+        });
     }
 
     setIsListening(true);

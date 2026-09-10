@@ -82,7 +82,9 @@ class VoiceService {
     }
 
     try {
+      console.log('[KalaKriti] 🎙️ Requesting microphone permission via getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[KalaKriti] ✅ Microphone permission granted.');
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
 

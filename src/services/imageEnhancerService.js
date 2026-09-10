@@ -58,7 +58,7 @@ export const fileOrUrlToBase64 = (imageInput) => {
 // ─── Step 1 → Detect product category from image via Gemini text ──────────────
 
 const detectProductCategory = async (mimeType, base64Data, apiKey) => {
-  const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  const textModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
   let lastError = null;
 
   for (const model of textModels) {
@@ -68,11 +68,14 @@ const detectProductCategory = async (mimeType, base64Data, apiKey) => {
       contents: [{
         parts: [
           {
-            text: `Look at this photo and identify the main handcrafted/artisan product visible.
+            text: `Look at this photo and identify the main product visible.
+Determine if it is an authentic handcrafted/artisan craft item or a non-craft item (like a document, paper, envelope, invoice, screen, furniture, generic object).
+
 Return ONLY a JSON object in this exact format, no extra text:
 {
-  "product": "<short product name, e.g. wooden elephant, blue pottery bowl, kalamkari stole>",
+  "product": "<short product name, e.g. wooden elephant, blue pottery bowl, kalamkari stole, document, paper>",
   "category": "<one of: wooden_craft | pottery | jewellery | textile | painting | metal_craft | leather | other>",
+  "isHandcrafted": true or false,
   "backgroundStyle": "<one short sentence describing the ideal professional e-commerce background for this product, e.g. 'warm artisan wooden workshop table with soft natural light'>"
 }`
           },
@@ -105,14 +108,20 @@ Return ONLY a JSON object in this exact format, no extra text:
         const parsed = JSON.parse(cleaned);
         console.log(`[KalaKriti] ✅ Detected product: "${parsed.product}"`);
         console.log(`[KalaKriti] ✅ Detected category: "${parsed.category}"`);
+        console.log(`[KalaKriti] ✅ Is handcrafted: ${parsed.isHandcrafted}`);
         console.log(`[KalaKriti] ✅ Background style: "${parsed.backgroundStyle}"`);
-        return parsed;
+        return {
+          product: parsed.product || 'handcrafted artisan product',
+          category: parsed.category || 'other',
+          isHandcrafted: typeof parsed.isHandcrafted === 'boolean' ? parsed.isHandcrafted : true,
+          backgroundStyle: parsed.backgroundStyle || 'clean neutral studio with soft professional lighting'
+        };
       } catch {
-        // If parsing fails use sensible defaults
         console.warn('[KalaKriti] ⚠️ Could not parse category JSON, using defaults. Raw:', raw);
         return {
           product: 'handcrafted artisan product',
           category: 'other',
+          isHandcrafted: true,
           backgroundStyle: 'clean neutral studio with soft professional lighting'
         };
       }
@@ -122,11 +131,11 @@ Return ONLY a JSON object in this exact format, no extra text:
     }
   }
 
-  // Fallback defaults if all text models fail
   console.warn('[KalaKriti] ⚠️ Product detection fallback due to errors:', lastError);
   return {
     product: 'handcrafted artisan product',
     category: 'other',
+    isHandcrafted: true,
     backgroundStyle: 'clean neutral studio with soft professional lighting'
   };
 };
@@ -149,10 +158,10 @@ Your task:
 
 CRITICAL: The output image must show ONLY the isolated product on the new background. Do NOT include hands, people, or the original background.`;
 
-  // Try current supported Gemini models in order
+  // Try current supported Gemini image-generation models in order
   const modelsToTry = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash'
+    'gemini-2.5-flash-image',
+    'gemini-2.0-flash-exp-image-generation'
   ];
 
   let detailedErrors = [];
@@ -238,7 +247,7 @@ export const checkAuthenticity = async (imageInput) => {
       return DEFAULT_AUTHENTIC;
     }
 
-    const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    const textModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
 
     for (const model of textModels) {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -390,6 +399,10 @@ export const enhanceProductImage = async (imageInput) => {
 
     // Step 1: Detect product + category
     productInfo = await detectProductCategory(mimeType, base64Data, apiKey);
+
+    if (productInfo.isHandcrafted === false) {
+      throw new Error("This photo does not appear to show a handcrafted artisan product. Please retake the photo showing your craft item.");
+    }
 
     // Step 2: Generate professional product image
     const generatedDataUrl = await generateProductImage(mimeType, base64Data, productInfo, apiKey);

@@ -60,7 +60,7 @@ Return ONLY a JSON object in this exact format with no markdown formatting:
   "descriptionHi": "<professional SEO description in Hindi>"
 }`;
 
-  const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  const textModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
   let lastError = null;
 
   for (const model of textModels) {
