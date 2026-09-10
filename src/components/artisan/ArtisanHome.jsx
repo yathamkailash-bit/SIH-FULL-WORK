@@ -22,6 +22,9 @@ export const ArtisanHome = () => {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   const displayName = user?.name || t('artisan_title') || 'Artisan';
+  const myProductsCount = products.filter(
+    p => p.artisanId === user?.id || (p.artisanName && user?.name && p.artisanName.toLowerCase() === user.name.toLowerCase())
+  ).length;
 
   const handleActionClick = (action) => {
     if (action === 'add_product') {
@@ -34,10 +37,22 @@ export const ArtisanHome = () => {
   };
 
   const handleVoiceActionTrigger = (action) => {
-    if (action === 'add_product') {
+    if (action === 'add_product' || action === 'enhance_image' || action === 'create_description') {
       setCurrentView('add_product');
     } else if (action === 'view_orders') {
+      setCurrentView('dashboard');
       setActiveTab('orders');
+    } else if (action === 'view_products') {
+      setCurrentView('dashboard');
+      setActiveTab('orders');
+    } else if (action === 'view_earnings' || action === 'view_sales') {
+      setCurrentView('dashboard');
+      setActiveTab('me');
+    } else if (action === 'view_notifications') {
+      setCurrentView('notifications');
+    } else if (action === 'go_home') {
+      setCurrentView('dashboard');
+      setActiveTab('home');
     }
   };
 
@@ -54,6 +69,7 @@ export const ArtisanHome = () => {
           />
         ) : currentView === 'notifications' ? (
           <NotificationsView
+            onBack={() => setCurrentView('dashboard')}
             onNavigateBulkTracker={() => setCurrentView('bulk_tracker')}
           />
         ) : currentView === 'bulk_tracker' ? (
@@ -130,7 +146,7 @@ export const ArtisanHome = () => {
                       </div>
                       <div className="text-left">
                         <h3 className="text-base font-extrabold text-stone-900 group-hover:text-emerald-800">
-                          {t('my_products')} ({products.length})
+                          {t('my_products')} ({myProductsCount})
                         </h3>
                         <p className="text-xs font-semibold text-stone-500 mt-0.5">
                           {t('my_products_sub')}

@@ -149,12 +149,10 @@ Your task:
 
 CRITICAL: The output image must show ONLY the isolated product on the new background. Do NOT include hands, people, or the original background.`;
 
-  // Try current image generation models in order
+  // Try current supported Gemini models in order
   const modelsToTry = [
-    'gemini-3.1-flash-image',
-    'imagen-3.0-generate-002',
-    'gemini-2.5-flash-image',
-    'gemini-2.0-flash-exp'
+    'gemini-2.5-flash',
+    'gemini-2.0-flash'
   ];
 
   let detailedErrors = [];
@@ -297,25 +295,113 @@ Respond ONLY in this exact JSON format, no other text:
   }
 };
 
+// ─── CAPABILITY 0 — Studio Canvas Backdrop Generator ──────────────────────────
+
+export const generateStudioCanvasBackdrop = (imageInput) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Warm neutral studio wall background (matching elephant_enhanced.png reference)
+      const wallGrad = ctx.createLinearGradient(0, 0, 0, 480);
+      wallGrad.addColorStop(0, '#EAE0D5');
+      wallGrad.addColorStop(1, '#D6C7B2');
+      ctx.fillStyle = wallGrad;
+      ctx.fillRect(0, 0, 800, 480);
+
+      // 2. Warm neutral wooden tabletop surface
+      const tableGrad = ctx.createLinearGradient(0, 480, 0, 800);
+      tableGrad.addColorStop(0, '#C49A6C');
+      tableGrad.addColorStop(0.3, '#A87B4F');
+      tableGrad.addColorStop(1, '#7A5230');
+      ctx.fillStyle = tableGrad;
+      ctx.fillRect(0, 480, 800, 320);
+
+      // Table horizon line highlight
+      ctx.fillStyle = 'rgba(255, 248, 235, 0.4)';
+      ctx.fillRect(0, 478, 800, 3);
+
+      // 3. Soft realistic product drop shadow
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(400, 615, 210, 36, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.filter = 'blur(14px)';
+      ctx.fill();
+      ctx.restore();
+
+      // 4. Draw product centered on tabletop horizon
+      const maxDim = 460;
+      let w = img.width;
+      let h = img.height;
+      if (w > h) {
+        h = (h / w) * maxDim;
+        w = maxDim;
+      } else {
+        w = (w / h) * maxDim;
+        h = maxDim;
+      }
+      const x = 400 - w / 2;
+      const y = 600 - h;
+
+      ctx.drawImage(img, x, y, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+    };
+    img.onerror = () => {
+      resolve(typeof imageInput === 'string' ? imageInput : '');
+    };
+    img.src = typeof imageInput === 'string' ? imageInput : (imageInput instanceof Blob || imageInput instanceof File ? URL.createObjectURL(imageInput) : String(imageInput));
+  });
+};
+
 // ─── CAPABILITY 1 — Main Enhancement Entry Point ─────────────────────────────
 
 export const enhanceProductImage = async (imageInput) => {
   const apiKey = getApiKey();
+  const rawDataUrl = typeof imageInput === 'string' && imageInput.startsWith('data:') 
+    ? imageInput 
+    : await fileOrUrlToBase64(imageInput).then(res => res.fullDataUrl).catch(() => '');
+
+  let productInfo = {
+    product: 'handcrafted artisan product',
+    category: 'other',
+    backgroundStyle: 'warm neutral wood tone studio table with soft lighting'
+  };
 
   if (!apiKey || apiKey === 'MY_API_KEY') {
-    console.error('[KalaKriti] ❌ No valid Gemini API key found in VITE_GEMINI_API_KEY.');
-    throw new Error('VITE_GEMINI_API_KEY is not configured. Please set your Gemini API key in the environment.');
+    console.warn('[KalaKriti] ⚠️ No valid Gemini API key found. Using studio backdrop fallback.');
+    const studioUrl = await generateStudioCanvasBackdrop(imageInput);
+    return {
+      dataUrl: studioUrl || rawDataUrl,
+      productInfo,
+      fallbackNote: "Enhancement unavailable right now — continuing with studio presentation"
+    };
   }
 
   console.log('[KalaKriti] 🚀 Starting AI product image enhancement pipeline...');
 
-  const { mimeType, base64Data } = await fileOrUrlToBase64(imageInput);
+  try {
+    const { mimeType, base64Data } = await fileOrUrlToBase64(imageInput);
 
-  // Step 1: Detect product + category
-  const productInfo = await detectProductCategory(mimeType, base64Data, apiKey);
+    // Step 1: Detect product + category
+    productInfo = await detectProductCategory(mimeType, base64Data, apiKey);
 
-  // Step 2: Generate professional product image
-  const generatedDataUrl = await generateProductImage(mimeType, base64Data, productInfo, apiKey);
+    // Step 2: Generate professional product image
+    const generatedDataUrl = await generateProductImage(mimeType, base64Data, productInfo, apiKey);
+    return { dataUrl: generatedDataUrl, productInfo };
 
-  return { dataUrl: generatedDataUrl, productInfo };
+  } catch (err) {
+    console.warn('[KalaKriti] ⚠️ AI model enhancement API failed/rate-limited:', err.message);
+    const studioUrl = await generateStudioCanvasBackdrop(imageInput);
+    return {
+      dataUrl: studioUrl || rawDataUrl,
+      productInfo,
+      fallbackNote: "Enhancement unavailable right now — continuing with studio presentation"
+    };
+  }
 };

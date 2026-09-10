@@ -88,7 +88,10 @@ const baseTranslations = {
   place_order: "Place Order",
   cart_empty: "Your cart is empty",
   shopping_cart: "Shopping Cart",
-  total_amount: "Total Amount"
+  total_amount: "Total Amount",
+  err_enter_name: "Please enter your full name to register.",
+  err_enter_pin: "Please enter a 4-digit numeric PIN",
+  err_no_account: "No account found for this mobile/email. Please register first."
 };
 
 export const TRANSLATIONS = {

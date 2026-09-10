@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, Lightbulb, Check, Edit2, TrendingUp } from 'lucide-react';
+import { Volume2, Lightbulb, Check, Edit2, TrendingUp, ArrowLeft } from 'lucide-react';
 import { calculateSuggestedPrice, getAIMarketPriceSuggestion } from '../../services/priceEstimatorService';
 import { STATE_LABOUR_RATES } from '../../data/stateLabourRates';
 import { useVoice } from '../../context/VoiceContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductInfo, description, _onBack }) => {
+export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductInfo, description, onBack }) => {
   const { speakPrompt } = useVoice();
   const { t } = useLanguage();
 
@@ -59,14 +59,26 @@ export const PriceEstimatorView = ({ formData, onConfirmPrice, detectedProductIn
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-5 bg-[#FAF7F2] select-none">
+    <div className="flex-1 flex flex-col justify-between p-5 bg-[#FAF7F2] select-none min-h-full">
       <div>
-        <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight">
-          {t('suggested_price')}
-        </h2>
-        <p className="text-xs text-stone-500 font-medium mt-1">
-          Fair cost floor + AI Market Trend analysis for handcrafted items.
-        </p>
+        <div className="flex items-center gap-3 mb-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-700 shadow-2xs hover:bg-stone-50"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <div>
+            <h2 className="text-xl font-extrabold text-stone-900 tracking-tight">
+              {t('suggested_price') || 'Suggested Price'}
+            </h2>
+            <p className="text-[11px] text-stone-500 font-medium">
+              Fair cost floor + AI Market Trend analysis for handcrafted items.
+            </p>
+          </div>
+        </div>
 
         {/* State Selector */}
         <div className="mt-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs">

@@ -179,31 +179,52 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
   };
 
   // MULTILINGUAL AUTO-CATALOGER FLOW
+  const [typedDescription, setTypedDescription] = useState('');
+
+  const processProductDescription = async (textInput) => {
+    if (!textInput || !textInput.trim()) return;
+    setIsCataloging(true);
+    setCatalogError(null);
+    speakPrompt("Analyzing description and generating product catalog...");
+
+    try {
+      const res = await generateMultilingualCatalog({
+        productName: formData.name,
+        craft: formData.craft,
+        material: formData.material,
+        spokenText: textInput.trim()
+      });
+
+      setBilingualDescription({
+        descriptionEn: res.descriptionEn,
+        descriptionHi: res.descriptionHi
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        name: res.name || prev.name,
+        craft: res.craft || prev.craft,
+        material: res.material || prev.material,
+        labourCost: res.labourCost || prev.labourCost
+      }));
+
+      setIsCataloging(false);
+      speakPrompt("Product details auto-filled! Advancing to step 2.");
+      setStep(2);
+    } catch (err) {
+      console.error('[KalaKriti] Auto-cataloger error:', err.message);
+      setIsCataloging(false);
+      setCatalogError(err.message || "Failed to generate AI descriptions. Please try again.");
+      speakPrompt("Description generation failed. Please try again.");
+    }
+  };
+
   const handleSpokenDescriptionCatalog = () => {
     setCatalogError(null);
     speakPrompt("Tell me about the product", () => {
-      startListening(async (transcript) => {
-        if (!transcript) return;
-        setIsCataloging(true);
-        speakPrompt("Writing your product description...");
-
-        try {
-          const res = await generateMultilingualCatalog({
-            productName: formData.name,
-            craft: formData.craft,
-            material: formData.material,
-            spokenText: transcript
-          });
-
-          setBilingualDescription(res);
-          setIsCataloging(false);
-          speakPrompt("Descriptions generated in English and Hindi!");
-          setStep(2);
-        } catch (err) {
-          console.error('[KalaKriti] Auto-cataloger error:', err.message);
-          setIsCataloging(false);
-          setCatalogError(err.message || "Failed to generate AI descriptions. Please try again.");
-          speakPrompt("Description generation failed. Please try again.");
+      startListening((transcript) => {
+        if (transcript) {
+          processProductDescription(transcript);
         }
       });
     });
@@ -505,30 +526,57 @@ export const AddProductStepper = ({ onComplete, onCancel }) => {
               </div>
             )}
 
-            {/* GATED MICROPHONE BUTTON FOR MULTILINGUAL AUTO-CATALOGER (Rule 2.8: Render ONLY when enhancedPhoto && !isBlockedByAuthenticity) */}
+            {/* GATED SPEAK OR WRITE PROMPT (Render ONLY after photo verification/enhancement succeeds) */}
             {enhancedPhoto && !isBlockedByAuthenticity && (
-              <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in">
-                <span className="text-xs text-stone-400 font-bold uppercase tracking-widest">or</span>
+              <div className="mt-4 p-4 bg-white border-2 border-emerald-500/40 rounded-3xl shadow-md flex flex-col items-center gap-3 animate-in fade-in">
+                <p className="text-xs font-extrabold text-stone-800 text-center">
+                  Tap to speak or write a description of your product.
+                </p>
 
                 {isCataloging ? (
-                  <div className="w-full py-4 bg-amber-500/20 border border-amber-400 text-amber-900 rounded-2xl flex items-center justify-center gap-2 text-xs font-extrabold">
+                  <div className="w-full py-3.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold">
                     <Loader2 size={18} className="animate-spin text-amber-600" />
-                    <span>Writing your product description...</span>
+                    <span>Writing your AI product description...</span>
                   </div>
                 ) : (
-                  <button
-                    onClick={handleSpokenDescriptionCatalog}
-                    className={`w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 ${
-                      isListening ? 'mic-pulse' : ''
-                    }`}
-                  >
-                    <Mic size={18} />
-                    <span>🎤 Tell me about the product</span>
-                  </button>
+                  <div className="w-full space-y-2">
+                    <button
+                      onClick={handleSpokenDescriptionCatalog}
+                      className={`w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-2 transition ${
+                        isListening ? 'mic-pulse' : ''
+                      }`}
+                    >
+                      <Mic size={18} />
+                      <span>🎤 Tap to Speak Description</span>
+                    </button>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={typedDescription}
+                        onChange={(e) => setTypedDescription(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            processProductDescription(typedDescription);
+                          }
+                        }}
+                        placeholder="Or write description here..."
+                        className="flex-1 px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold text-stone-900 focus:outline-none focus:border-emerald-600"
+                      />
+                      <button
+                        onClick={() => processProductDescription(typedDescription)}
+                        disabled={!typedDescription.trim()}
+                        className="px-4 py-2 bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs disabled:opacity-40"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {catalogError && (
-                  <div className="w-full p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 text-center">
+                  <div className="w-full p-2 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 text-center">
                     ⚠️ {catalogError}
                   </div>
                 )}

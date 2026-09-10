@@ -36,23 +36,28 @@ export const generateMultilingualCatalog = async ({
   }
 
   const promptText = `You are a professional artisan marketplace cataloger in India.
-An artisan has uploaded a handcrafted product and spoken about it.
+An artisan has uploaded a handcrafted product photo and spoken/typed a description about it.
 
 Product context:
-- Product Name: "${productName}"
-- Craft / Category: "${craft}"
-- Material: "${material}"
-- Spoken description from artisan (may be in Hindi, Telugu, Tamil, Marathi, Bengali, or English): "${spokenText}"
+- Initial Name: "${productName}"
+- Initial Craft/Category: "${craft}"
+- Initial Material: "${material}"
+- Spoken/Typed description from artisan: "${spokenText}"
 
 Your task:
-1. Interpret the spoken description regardless of input language.
-2. Generate a professional, attractive, SEO-friendly product description in English.
-3. Generate a professional, attractive, SEO-friendly product description in Hindi.
+1. Interpret the artisan's description regardless of input language (Hindi, Telugu, Tamil, Marathi, Bengali, English, etc.).
+2. Extract or refine key product details: product name, craft category, materials used, estimated labour cost if mentioned.
+3. Generate a professional, attractive, SEO-friendly product description in English.
+4. Generate a professional, attractive, SEO-friendly product description in Hindi.
 
-Return ONLY a JSON object in this exact format, with no extra text or markdown formatting:
+Return ONLY a JSON object in this exact format with no markdown formatting:
 {
-  "descriptionEn": "<professional SEO-friendly description in English, 2-3 sentences>",
-  "descriptionHi": "<professional SEO-friendly description in Hindi, 2-3 sentences>"
+  "name": "<concise product name in English>",
+  "craft": "<craft category name>",
+  "material": "<materials used>",
+  "labourCost": <integer estimated labour cost in INR or null>,
+  "descriptionEn": "<professional SEO description in English>",
+  "descriptionHi": "<professional SEO description in Hindi>"
 }`;
 
   const textModels = ['gemini-2.5-flash', 'gemini-2.0-flash'];
@@ -90,16 +95,23 @@ Return ONLY a JSON object in this exact format, with no extra text or markdown f
 
       try {
         const parsed = JSON.parse(cleaned);
-        if (parsed.descriptionEn && parsed.descriptionHi) {
+        if (parsed.descriptionEn || parsed.descriptionHi) {
           return {
-            descriptionEn: parsed.descriptionEn,
-            descriptionHi: parsed.descriptionHi
+            name: parsed.name || productName,
+            craft: parsed.craft || craft,
+            material: parsed.material || material,
+            labourCost: parsed.labourCost || null,
+            descriptionEn: parsed.descriptionEn || spokenText,
+            descriptionHi: parsed.descriptionHi || spokenText
           };
         }
       } catch {
-        // Fall back to simple text split if JSON parse fails
         if (raw) {
           return {
+            name: productName,
+            craft: craft,
+            material: material,
+            labourCost: null,
             descriptionEn: raw.slice(0, 300),
             descriptionHi: raw.slice(0, 300)
           };

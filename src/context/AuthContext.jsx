@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: 'Please enter your full name to register.' };
     }
 
-    // Generic fallback name for missing data (never hardcoded fake names)
+    // Generic fallback name for missing data
     const fallbackName = role === 'artisan' ? 'New Artisan' : (role === 'admin' ? 'Admin Coordinator' : 'Customer User');
 
     // Hash the PIN before storing or matching
@@ -89,8 +89,12 @@ export const AuthProvider = ({ children }) => {
       usersDb = {};
     }
 
+    // Stable ID generator based on identifier
+    const stableId = 'user-' + cleanIdentifier.replace(/[^a-zA-Z0-9]/g, '_');
+
     if (mode === 'register') {
       usersDb[cleanIdentifier] = {
+        id: stableId,
         pinHash: hashedPin,
         role: role,
         name: cleanName || fallbackName,
@@ -99,35 +103,30 @@ export const AuthProvider = ({ children }) => {
       };
       localStorage.setItem('kalakriti_users_db', JSON.stringify(usersDb));
       broadcastDataUpdate('users', [usersDb[cleanIdentifier]]);
+      return { success: true, registered: true };
     } else {
-      // Login mode - if user exists, verify PIN Hash
-      if (usersDb[cleanIdentifier]) {
-        const storedHash = usersDb[cleanIdentifier].pinHash || usersDb[cleanIdentifier].pin;
-        // Verify PIN hash or legacy plaintext pin
-        if (storedHash !== hashedPin && storedHash !== cleanPin) {
-          return { success: false, error: 'Incorrect PIN for this account. Please try again.' };
-        }
-      } else {
-        // First login auto-creation with generic default name
-        usersDb[cleanIdentifier] = {
-          pinHash: hashedPin,
-          role: role,
-          name: cleanName || fallbackName,
-          state: 'Andhra Pradesh',
-          registeredAt: new Date().toISOString()
+      // Login mode - MUST check if user exists first!
+      if (!usersDb[cleanIdentifier]) {
+        return {
+          success: false,
+          error: 'No account found for this mobile number or email. Please register first.'
         };
-        localStorage.setItem('kalakriti_users_db', JSON.stringify(usersDb));
-        broadcastDataUpdate('users', [usersDb[cleanIdentifier]]);
+      }
+
+      const storedHash = usersDb[cleanIdentifier].pinHash || usersDb[cleanIdentifier].pin;
+      // Verify PIN hash or legacy plaintext pin
+      if (storedHash !== hashedPin && storedHash !== cleanPin) {
+        return { success: false, error: 'Incorrect PIN for this account. Please try again.' };
       }
     }
 
     const matchedUser = usersDb[cleanIdentifier];
     const newUser = {
-      id: 'user-' + Date.now(),
+      id: matchedUser.id || stableId,
       identifier: cleanIdentifier,
-      role: role,
-      name: matchedUser?.name || cleanName || fallbackName,
-      state: matchedUser?.state || 'Andhra Pradesh'
+      role: matchedUser.role || role,
+      name: matchedUser.name || cleanName || fallbackName,
+      state: matchedUser.state || 'Andhra Pradesh'
     };
 
     setUser(newUser);

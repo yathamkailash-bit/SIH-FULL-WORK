@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Phone, User, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Phone, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -12,6 +13,7 @@ export const AuthModal = () => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [authError, setAuthError] = useState(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -29,8 +31,22 @@ export const AuthModal = () => {
 
     const result = await loginWithPin(identifier, pin, mode, name.trim());
     if (result && !result.success) {
-      setAuthError(result.error || "Authentication failed. Please check your PIN.");
+      setAuthError(result.error || t('err_no_account') || "Authentication failed. Please check your details.");
+    } else if (result?.registered) {
+      setRegistrationSuccess(true);
+      try {
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.5 } });
+      } catch {
+        // ignore
+      }
     }
+  };
+
+  const handleProceedToLogin = () => {
+    setRegistrationSuccess(false);
+    setMode('login');
+    setPin('');
+    setAuthError(null);
   };
 
   const handlePinClick = (num) => {
@@ -42,6 +58,34 @@ export const AuthModal = () => {
   const handlePinDelete = () => {
     setPin(prev => prev.slice(0, -1));
   };
+
+  if (registrationSuccess) {
+    return (
+      <div className="flex-1 flex flex-col justify-between p-6 bg-[#FAF7F2] select-none text-center min-h-full">
+        <div className="my-auto py-8 flex flex-col items-center">
+          <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4 border-4 border-emerald-300 animate-bounce shadow-lg">
+            <CheckCircle2 size={48} />
+          </div>
+          <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight">
+            Registration Successful!
+          </h2>
+          <p className="text-xs font-semibold text-stone-600 mt-2 max-w-xs leading-relaxed">
+            Your account has been registered successfully. Please log in with your registered phone number and 4-digit PIN to access the {role} portal.
+          </p>
+        </div>
+
+        <div className="pb-4">
+          <button
+            onClick={handleProceedToLogin}
+            className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-bold text-base shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2 transition"
+          >
+            <span>Proceed to Login</span>
+            <ArrowRight size={20} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col justify-between p-5 bg-[#FAF7F2] select-none">

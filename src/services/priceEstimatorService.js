@@ -21,12 +21,14 @@ export const calculateSuggestedPrice = ({
   const parsedWorkers = Number(workersCount) || 1;
   const parsedDays = Number(workingDays) || 1;
 
-  // Determine daily labour rate based on state database or custom input
-  const dailyRate = customLabourRate 
-    ? Number(customLabourRate) 
-    : getStateLabourRate(state, craftCategory);
+  // Determine daily labour rate based on state database
+  const dailyRate = getStateLabourRate(state, craftCategory);
 
-  const totalLabourCost = dailyRate * parsedWorkers * parsedDays;
+  // If custom estimated total labour cost is supplied, use it directly without re-multiplying by days/workers
+  const totalLabourCost = customLabourRate 
+    ? Number(customLabourRate) 
+    : (dailyRate * parsedWorkers * parsedDays);
+
   const logisticsAndPlatformFee = 100;
 
   const estimatedCost = parsedMaterial + totalLabourCost + logisticsAndPlatformFee;

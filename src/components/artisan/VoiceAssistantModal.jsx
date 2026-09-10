@@ -9,34 +9,59 @@ export const VoiceAssistantModal = ({ isOpen, onClose, onActionTrigger }) => {
   const [statusMessage, setStatusMessage] = useState("Tap mic to speak");
 
   const processCommand = useCallback((text) => {
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().trim();
     setStatusMessage(`Recognized: "${text}"`);
 
-    if (lower.includes('add') || lower.includes('product') || lower.includes('photo') || lower.includes('सामान') || lower.includes('చేయి')) {
-      speakPrompt("Opening Add Product");
+    let action = 'go_home';
+    let promptText = 'Navigating...';
+
+    if (lower.includes('add') || lower.includes('new product') || lower.includes('wooden toy') || lower.includes('सामान') || lower.includes('చేయి')) {
+      action = 'add_product';
+      promptText = 'Opening Add Product';
+    } else if (lower.includes('my product') || lower.includes('inventory')) {
+      action = 'view_products';
+      promptText = 'Opening My Products';
+    } else if (lower.includes('order')) {
+      action = 'view_orders';
+      promptText = 'Opening Orders';
+    } else if (lower.includes('earning')) {
+      action = 'view_earnings';
+      promptText = 'Opening Earnings';
+    } else if (lower.includes('notification')) {
+      action = 'view_notifications';
+      promptText = 'Opening Notifications';
+    } else if (lower.includes('sale')) {
+      action = 'view_sales';
+      promptText = 'Opening Sales Dashboard';
+    } else if (lower.includes('enhance') || lower.includes('studio')) {
+      action = 'enhance_image';
+      promptText = 'Opening AI Image Studio';
+    } else if (lower.includes('description')) {
+      action = 'create_description';
+      promptText = 'Starting AI Description Generator';
+    } else if (lower.includes('search')) {
+      const query = lower.replace(/^search\s*(for)?\s*/i, '').trim();
+      action = 'search_product';
+      promptText = query ? `Searching for ${query}` : 'Opening Product Search';
+      speakPrompt(promptText);
       setTimeout(() => {
         onClose();
-        onActionTrigger('add_product');
+        onActionTrigger('search_product', query);
       }, 1200);
-    } else if (lower.includes('order') || lower.includes('ऑर्डर') || lower.includes('ఆర్డర్')) {
-      speakPrompt("Showing your orders");
-      setTimeout(() => {
-        onClose();
-        onActionTrigger('view_orders');
-      }, 1200);
-    } else if (lower.includes('my product') || lower.includes('inventory') || lower.includes('सामग्री')) {
-      speakPrompt("Showing your products");
-      setTimeout(() => {
-        onClose();
-        onActionTrigger('view_products');
-      }, 1200);
+      return;
+    } else if (lower.includes('home') || lower.includes('dashboard')) {
+      action = 'go_home';
+      promptText = 'Returning to Dashboard';
     } else {
-      speakPrompt("Command received. Opening Add Product.");
-      setTimeout(() => {
-        onClose();
-        onActionTrigger('add_product');
-      }, 1500);
+      action = 'add_product';
+      promptText = 'Opening Add Product';
     }
+
+    speakPrompt(promptText);
+    setTimeout(() => {
+      onClose();
+      onActionTrigger(action);
+    }, 1200);
   }, [speakPrompt, onClose, onActionTrigger]);
 
   const handleStartMic = useCallback(() => {

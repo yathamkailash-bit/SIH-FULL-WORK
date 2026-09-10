@@ -1,17 +1,27 @@
 import React from 'react';
-import { ChevronRight, Package, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Package, Sparkles } from 'lucide-react';
 import { useAppData } from '../../context/AppDataContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const NotificationsView = ({ onNavigateBulkTracker }) => {
+export const NotificationsView = ({ onBack, onNavigateBulkTracker }) => {
   const { notifications } = useAppData();
   const { t } = useLanguage();
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FAF7F2] p-4 select-none">
-      <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight mb-4">
-        {t('notifications')}
-      </h2>
+    <div className="flex-1 flex flex-col bg-[#FAF7F2] p-4 select-none min-h-full">
+      <div className="flex items-center gap-3 mb-4">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="w-9 h-9 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-700 shadow-2xs hover:bg-stone-50"
+          >
+            <ArrowLeft size={18} />
+          </button>
+        )}
+        <h2 className="text-xl font-extrabold text-stone-900 tracking-tight">
+          {t('notifications') || 'Notifications'}
+        </h2>
+      </div>
 
       <div className="space-y-3">
         {notifications.map((notif) => {

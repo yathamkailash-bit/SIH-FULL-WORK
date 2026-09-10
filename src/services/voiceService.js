@@ -97,38 +97,44 @@ class VoiceService {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         
         try {
-          // Convert audio blob to base64 and send to Gemini for multi-lingual transcription
           const apiKey = getApiKey();
           if (apiKey) {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-              const base64Data = reader.result.split(',')[1];
-              const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-              const body = {
-                contents: [{
-                  parts: [
-                    { text: "Listen to this audio recording in an Indian language (Hindi/Telugu/Tamil/Kannada/Bengali/English) and transcribe the spoken words accurately. Return ONLY the transcribed text string." },
-                    { inlineData: { mimeType: 'audio/webm', data: base64Data } }
-                  ]
-                }]
-              };
-              const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-              if (res.ok) {
-                const json = await res.json();
-                const transcript = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-                if (transcript && onResult) {
-                  onResult(transcript, true);
-                  if (onEnd) onEnd();
-                  return;
+            await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              reader.onloadend = async () => {
+                try {
+                  const base64Data = reader.result.split(',')[1];
+                  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                  const body = {
+                    contents: [{
+                      parts: [
+                        { text: "Listen to this audio recording in an Indian language (Hindi/Telugu/Tamil/Kannada/Bengali/English) and transcribe the spoken words accurately. Return ONLY the transcribed text string." },
+                        { inlineData: { mimeType: 'audio/webm', data: base64Data } }
+                      ]
+                    }]
+                  };
+                  const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  if (res.ok) {
+                    const json = await res.json();
+                    const transcript = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+                    if (transcript && onResult) {
+                      onResult(transcript, true);
+                    }
+                  }
+                } catch (err) {
+                  console.warn('[KalaKriti] Audio transcription error:', err.message);
+                } finally {
+                  resolve();
                 }
-              }
-            };
+              };
+            });
           }
         } catch (e) {
-          console.warn('[KalaKriti] Audio transcription fallback to STT:', e.message);
+          console.warn('[KalaKriti] Audio transcription fallback error:', e.message);
+        } finally {
+          if (onEnd) onEnd();
         }
-        if (onEnd) onEnd();
       };
 
       this.mediaRecorder.start();
